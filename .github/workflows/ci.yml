@@ -1,0 +1,78 @@
+# CI for vn-realtime-voice-agent.
+#
+# Runs on every push and pull request:
+#   1. compileall over src/ and scripts/
+#   2. pytest (the suite under tests/)
+#   3. CI grep: bans the retired SLO name, the retired reason spelling,
+#      the hyphenated reason value, the quoted uppercase reason value,
+#      and any duplicate definition of a locked constant outside
+#      src/contracts.py.
+#   4. the manifest gate in --skeleton mode (the repo is in its
+#      skeleton phase: contracts + gate + CI + infra, 0/21 modules
+#      merged). REMOVE the --skeleton flag once the first module
+#      lands — the gate's full mode is the default merge gate and
+#      must fail until all 21 approach files are present.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile all Python
+        run: python -m compileall src scripts
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: CI grep — banned spellings and duplicate definitions
+        run: |
+          set -e
+          # Retired total-SLO name (locked name is TOTAL_SLO_P95_MS).
+          if grep -rn "TOTAL_TURN_P95_MS" src/ scripts/ tests/ ; then
+            echo "CI grep FAIL: retired constant TOTAL_TURN_P95_MS found" >&2
+            exit 1
+          fi
+          # Retired customer-request spelling (locked value is customer_request).
+          if grep -rn "user_requested" src/ scripts/ tests/ ; then
+            echo "CI grep FAIL: retired spelling user_requested found" >&2
+            exit 1
+          fi
+          # Hyphenated reason value (locked values are snake_case).
+          if grep -rn "out-of-scope" src/ scripts/ tests/ ; then
+            echo "CI grep FAIL: hyphenated reason value out-of-scope found" >&2
+            exit 1
+          fi
+          # Uppercase reason as a quoted string value (the enum member
+          # name EscalationReason.OUT_OF_SCOPE is allowed; the string
+          # value "OUT_OF_SCOPE" is not — values are snake_case).
+          if grep -rn '"OUT_OF_SCOPE"' src/ scripts/ tests/ ; then
+            echo 'CI grep FAIL: quoted string value "OUT_OF_SCOPE" found' >&2
+            exit 1
+          fi
+          # Duplicate definitions of locked constants outside contracts.py.
+          if grep -rn -E "^[[:space:]]*(ASR_PARTIAL_MS|LLM_FIRST_TOKEN_MS|TTS_FIRST_AUDIO_MS|TOTAL_SLO_P95_MS|TOOL_CALL_OFF_PATH_MS|MAX_CLARIFICATIONS|CONTAINMENT_WINDOW_HOURS)[[:space:]]*=" src/ scripts/ --include="*.py" | grep -v "src/contracts.py" ; then
+            echo "CI grep FAIL: duplicate locked-constant definition found" >&2
+            exit 1
+          fi
+          # Duplicate reason enum outside contracts.py.
+          if grep -rn "class EscalationReason" src/ scripts/ --include="*.py" | grep -v "src/contracts.py" ; then
+            echo "CI grep FAIL: duplicate EscalationReason definition found" >&2
+            exit 1
+          fi
+          echo "CI grep: ok"
+
+      - name: Manifest gate (skeleton mode — see comment at top of file)
+        run: python scripts/verify_main_manifest.py --skeleton --publish-evidence evidence.json --require-evidence

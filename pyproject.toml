@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vn-realtime-voice-agent"
+version = "0.1.0"
+description = "Realtime Vietnamese voice AI for customer service — answers from verified data, hands off with context when it cannot."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# No runtime dependencies: the locked contracts (src/contracts.py) and
+# the manifest gate use only the Python 3.11+ standard library.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+include = ["src*"]

@@ -1,8 +1,39 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
+*.so
+.Python
 .venv/
 venv/
-node_modules/
+env/
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Test / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+htmlcov/
+.coverage
+
+# Local config / secrets — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor / OS
+.vscode/
+.idea/
 .DS_Store
+Thumbs.db
+
+# Local runtime data (golden fixtures in data/golden/ ARE tracked)
+*.log
+*.sqlite3
+*.db
