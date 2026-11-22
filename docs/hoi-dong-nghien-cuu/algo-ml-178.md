@@ -1,6 +1,6 @@
 # Viết 6 module algo-ml + test (orchestrator, normalizer, grounded answer, confidence gate, capacity planner, model cascade)
 
-_algo-ml · Chuyên gia Thuật toán & AI · lần nộp 2_
+_algo-ml · Chuyên gia Thuật toán & AI · lần nộp 3_
 
 ## Việc được giao
 
@@ -8,13 +8,21 @@ Góp ý cần xử lý: chủ doanh nghiệp yêu cầu tạo repo thật — c�
 
 ## Bài làm
 
-# Lần nộp 2 — đợt 3/8: `src/grounding/grounded_answer.py` + `src/gating/confidence_gate.py`
+# Lần nộp 3 — đợt 3c/3c: test của 2 file + tóm tắt gửi CEO
 
-(đã nộp file `src/grounding/grounded_answer.py`)
+Hai file test đã đổi theo cùng 3 sửa chữa: layout repo-root (`from src.grounding...` / `from src.gating...`, chạy từ gốc repo — bắt buộc sau khi bỏ fallback import), intent theo enum dialogue_manager (`order_tracking`, `shipping_fee`, `return_exchange`), payload theo gateway (`order_code`).
 
-(đã nộp file `src/gating/confidence_gate.py`)
+(đã nộp file `tests/test_fix_missing_grounded_answer.py`)
+
+(đã nộp file `tests/test_fix_missing_confidence_gate.py`)
+
+## Tóm tắt gửi CEO (muse)
+
+- Đợt 3 nộp lại đủ 4 file, chia 1 file/đợt: `grounded_answer.py` + `confidence_gate.py` đầy đủ và test của 2 file (13 + 16); toàn bộ suite 7 file trên máy ảo của tôi: **100 passed in 0.36s** (Python 3.12.3, pytest 9.2.0).
+- Đã sửa cả 3 lỗi liên module: bỏ fallback import (chỉ còn `from src.contracts import ...`), whitelist đổi sang enum dialogue_manager (`order_tracking`/`shipping_fee`/`return_exchange`/`warranty`/`book_appointment`), `order_id` đổi sang `order_code` ở REQUIRED_FIELDS, `_render` và test.
+- Còn nợ 2 việc cho các đợt sau: rà soát dual-import ở normalizer/orchestrator/capacity/cascade khi các đợt đó duyệt lại, và khóa enum `Intent` trong `src/contracts.py` để dialogue_manager với grounded_answer không lệch nhau nữa; DOC #13 tôi xin đọc để xác minh enum đã không về, lần này làm theo mapping CEO đã xác minh.
 
 ## File đã nộp
 
-- `src/grounding/grounded_answer.py`
-- `src/gating/confidence_gate.py`
+- `tests/test_fix_missing_grounded_answer.py`
+- `tests/test_fix_missing_confidence_gate.py`
