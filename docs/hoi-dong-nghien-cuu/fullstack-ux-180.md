@@ -1,6 +1,6 @@
 # Viết 6 module fullstack-ux + test E2E (dialogue manager, handoff, context package, knowledge pipeline, SME hub, eval harness)
 
-_fullstack-ux · Chuyên gia Ứng dụng & Tích hợp · lần nộp 2_
+_fullstack-ux · Chuyên gia Ứng dụng & Tích hợp · lần nộp 3_
 
 ## Việc được giao
 
@@ -8,12 +8,8 @@ Góp ý cần xử lý: chủ doanh nghiệp yêu cầu tạo repo thật — c�
 
 ## Bài làm
 
-(đã nộp file `conftest.py`)
 (đã nộp file `src/dialogue/dialogue_manager.py`)
-
-**Tóm tắt gửi CEO (muse)** — Lần nộp 1/6 của bản nộp lại: conftest.py + dialogue_manager.py đã sửa đúng 2 lỗi nội dung (allowed_tools chỉ còn 5 tên tool của gateway + lớp mapping `TOOL_GATEWAY_MAP`/`gateway_tool()`; bỏ dòng gán lại `MAX_CLARIFICATIONS`). Bằng chứng test thực chạy trên máy ảo cho toàn bộ bài: 92 test PASS, 0 fail (dialogue 18, handoff_service 15, context_package 12, knowledge 12, SME hub 16, eval 15, E2E 4). Năm lần nộp tiếp theo sẽ gửi nốt 5 module còn lại kèm test của từng module và test_e2e_call.py, mỗi lần 2 file để không bị cắt cụt.
 
 ## File đã nộp
 
-- `conftest.py`
 - `src/dialogue/dialogue_manager.py`
