@@ -44,6 +44,8 @@ from src.contracts import (  # noqa: F401  (re-exported for callers/tests)
     EscalationReason,
 )
 
+MAX_CLARIFICATIONS = int(MAX_CLARIFICATIONS)  # locked at 1 in contracts
+
 INTENT_SCHEMA_VERSION = "1.0.0"
 SLOT_SCHEMA_VERSION = "1.0.0"
 STATE_SCHEMA_VERSION = "1.0.0"
@@ -103,73 +105,36 @@ SLOT_PROMPTS_VI = {
     "address": "Anh/chị cho em xin địa chỉ ạ?",
 }
 
-# --- Tool gateway allowlist (locked by the tool gateway) -------------------
-# The gateway accepts EXACTLY these 5 tool names and rejects anything else.
-# Playbook ``allowed_tools`` below therefore use gateway names only. The
-# mapping keeps the older semantic names used in playbook drafts traceable
-# to the gateway name that actually executes them.
-GATEWAY_TOOLS = frozenset({
-    "get_order_status", "get_inventory", "get_appointment",
-    "get_policy", "create_callback_ticket",
-})
-
-TOOL_GATEWAY_MAP = {
-    "get_order": "get_order_status",
-    "get_delivery_status": "get_order_status",
-    "get_customer": "get_order_status",
-    "get_shipping_fee": "get_policy",
-    "get_return_policy": "get_policy",
-    "get_warranty_policy": "get_policy",
-    "get_delivery_eta": "get_order_status",
-    "get_schedule": "get_appointment",
-    "book_appointment": "get_appointment",
-    "get_inventory": "get_inventory",
-    "get_order_status": "get_order_status",
-    "get_policy": "get_policy",
-    "get_appointment": "get_appointment",
-    "create_callback_ticket": "create_callback_ticket",
-}
-
-
-def gateway_tool(name: str) -> str:
-    """Resolve a playbook/semantic tool name to its gateway tool name.
-    Raises ValueError for any name the gateway would reject."""
-    resolved = TOOL_GATEWAY_MAP.get(name)
-    if resolved is None or resolved not in GATEWAY_TOOLS:
-        raise ValueError(f"tool_not_allowed_by_gateway:{name}")
-    return resolved
-
-
 PLAYBOOKS: Dict[Intent, Playbook] = {
     Intent.ORDER_TRACKING: Playbook(
         Intent.ORDER_TRACKING, ("order_code",), ("phone",),
-        ("get_order_status",),
+        ("get_order", "get_delivery_status"),
         "Đơn {order_code} hiện đang ở trạng thái theo dữ liệu hệ thống.",
         ("tool_result_received", "customer_satisfied"), SLOT_PROMPTS_VI),
     Intent.SHIPPING_FEE: Playbook(
         Intent.SHIPPING_FEE, ("address",), ("order_code", "product"),
-        ("get_policy", "get_order_status"),
+        ("get_shipping_fee", "get_delivery_eta"),
         "Phí và thời gian giao tới {address} theo dữ liệu hệ thống.",
         ("tool_result_received",), SLOT_PROMPTS_VI),
     Intent.RETURN_EXCHANGE: Playbook(
         Intent.RETURN_EXCHANGE, ("order_code",), ("product", "phone"),
-        ("get_order_status", "get_policy"),
+        ("get_order", "get_return_policy"),
         "Thông tin đổi trả cho đơn {order_code} theo chính sách hiện hành.",
         ("tool_result_received", "policy_escalation"), SLOT_PROMPTS_VI),
     Intent.WARRANTY: Playbook(
         Intent.WARRANTY, ("order_code",), ("product", "phone"),
-        ("get_order_status", "get_policy"),
+        ("get_order", "get_warranty_policy"),
         "Thông tin bảo hành cho đơn {order_code} theo chính sách hiện hành.",
         ("tool_result_received", "policy_escalation"), SLOT_PROMPTS_VI),
     Intent.BOOK_APPOINTMENT: Playbook(
         Intent.BOOK_APPOINTMENT, ("appointment_time", "phone"),
         ("customer_name", "product"),
-        ("get_appointment", "create_callback_ticket"),
+        ("get_schedule", "book_appointment"),
         "Lịch hẹn {appointment_time} cho số {phone}.",
         ("tool_result_received", "slot_unavailable"), SLOT_PROMPTS_VI),
     Intent.CONFIRM_INFO: Playbook(
         Intent.CONFIRM_INFO, ("phone",), ("order_code", "customer_name"),
-        ("get_order_status", "get_inventory"),
+        ("get_customer", "get_order"),
         "Thông tin xác nhận cho số {phone} theo dữ liệu hệ thống.",
         ("tool_result_received",), SLOT_PROMPTS_VI),
     Intent.UNKNOWN: Playbook(
@@ -357,7 +322,7 @@ class DialogueManager:
                  max_clarifications: Optional[int] = None):
         self.llm_classifier = llm_classifier
         self.max_clarifications = (
-            int(MAX_CLARIFICATIONS) if max_clarifications is None
+            MAX_CLARIFICATIONS if max_clarifications is None
             else int(max_clarifications))
 
     def new_state(self, call_id: str = "", tenant_id: str = "",
@@ -482,7 +447,6 @@ class DialogueManager:
         """Store looked-up data in state; only data recorded here may be
         used to answer (grounding is enforced by the caller/verifier)."""
         pb = get_playbook(state.intent)
-        tool = gateway_tool(tool)  # legacy semantic names resolve here
         if tool not in pb.allowed_tools:
             raise ValueError(f"tool_not_allowed_for_intent:{tool}")
         state.looked_up_data[tool] = data
@@ -495,8 +459,7 @@ __all__ = [
     "REASON_REPEATED_CLARIFICATION", "REASON_OUT_OF_SCOPE",
     "REASON_LOW_CONFIDENCE",
     "MAX_CLARIFICATIONS", "INTENT_SCHEMA_VERSION", "SLOT_SCHEMA_VERSION",
-    "STATE_SCHEMA_VERSION", "GATEWAY_TOOLS", "TOOL_GATEWAY_MAP",
-    "gateway_tool", "Intent", "DialogueAction", "Playbook",
+    "STATE_SCHEMA_VERSION", "Intent", "DialogueAction", "Playbook",
     "PLAYBOOKS", "SLOT_PROMPTS_VI", "get_playbook", "detect_intent",
     "extract_slots", "DialogueState", "DialogueResult", "TurnResult",
     "DialogueManager",

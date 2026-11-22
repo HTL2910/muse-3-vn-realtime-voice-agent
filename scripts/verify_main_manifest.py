@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Post-merge manifest gate — fix_merge_pipeline_gate.
 
-Repo: vn-realtime-voice-agent (https://github.com/HTL2910/vn-realtime-voice-agent).
-First commit: repo skeleton. Full mode (default) verifies a merge is
-complete (21 approaches + contracts + scaffolding); --skeleton mode
-verifies only the skeleton set below, for the initial repo-creation
-commit, before any module has landed. The skeleton flag is explicit
-and documented — it can never silently pass a full repo.
+Branch: fix/fix_gate_order_check (extends fix_merge_pipeline_gate;
+ same script, plus the order check that debate round #3 required).
+Order check: a module that imports from src.contracts only counts
+as merged when src/contracts.py is present in the same manifest —
+rebased modules (dialogue_manager proved it by test) fail-closed
+on a missing contracts, so merging them first would turn a correct
+patch into a repo-wide import error.
 Repo: vn-realtime-voice-agent.
 
 Problem it closes: the council declared branches "merged into main"
@@ -52,8 +53,6 @@ Usage (CI post-merge, from the repo root):
     python3 scripts/verify_main_manifest.py --write-manifest manifest.json
     # fast manifest-only check (no compile / no pytest):
     python3 scripts/verify_main_manifest.py --skip-compile --skip-tests
-    # skeleton mode (first commit only — see header):
-    python3 scripts/verify_main_manifest.py --skeleton
     # publish the 3 audit evidences for this exact commit:
     python3 scripts/verify_main_manifest.py --publish-evidence evidence.json
     python3 scripts/verify_main_manifest.py --publish-evidence evidence.json --require-evidence
@@ -144,21 +143,6 @@ EXPECTED_FILES = {_clean_key(k): v for k, v in EXPECTED_FILES.items()}
 ALL_EXPECTED: list[str] = sorted(
     list(EXPECTED_FILES.values()) + REQUIRED_CORE_FILES)
 
-# Files the FIRST (skeleton) commit must contain: locked contracts,
-# this gate, CI, packaging, infra and the temp README. The 21
-# approach files are NOT in this set — they land in later merges,
-# each verified by the full mode. --skeleton exists only so the
-# repo-creation commit has a real, green gate run of its own.
-SKELETON_EXPECTED: list[str] = sorted([
-    "src/contracts.py",
-    "scripts/verify_main_manifest.py",
-    ".github/workflows/ci.yml",
-    "pyproject.toml",
-    ".gitignore",
-    "docker/docker-compose.yml",
-    "README.md",
-])
-
 
 @dataclass
 class VerificationResult:
@@ -238,8 +222,7 @@ def commit_hash(root: Path) -> str | None:
     return value or None
 
 
-def collect_evidence(root: Path, result: VerificationResult,
-                     mode: str = "full") -> dict:
+def collect_evidence(root: Path, result: VerificationResult) -> dict:
     """The 3 evidences audit round #3 requires, on ONE commit.
 
     Returns a dict with ``complete`` True only when (a) a commit hash
@@ -260,7 +243,6 @@ def collect_evidence(root: Path, result: VerificationResult,
         "tests_ok": result.tests_ok,
         "pytest_log": result.tests_output,
         "gate_ok": result.ok,
-        "mode": mode,
     }
     evidence["complete"] = bool(
         evidence["commit_hash"] and hashes and result.tests_ok is not None)
@@ -360,29 +342,23 @@ def check_order(root: Path, actual_files: list[str]) -> list[str]:
 
 
 def check_manifest(root: Path, expected_hashes: dict[str, str] | None = None,
-                   actual_files: list[str] | None = None,
-                   expected: list[str] | None = None) -> VerificationResult:
-    """Manifest-only check: existence, non-emptiness, hashes, dirs.
-
-    ``expected`` defaults to ALL_EXPECTED (full mode). Skeleton mode
-    passes SKELETON_EXPECTED instead — see --skeleton.
-    """
-    expected = ALL_EXPECTED if expected is None else expected
+                   actual_files: list[str] | None = None) -> VerificationResult:
+    """Manifest-only check: existence, non-emptiness, hashes, dirs."""
     actual = actual_files if actual_files is not None else list_repo_files(root)
     actual_set = set(actual)
-    missing = [p for p in expected if p not in actual_set]
+    missing = [p for p in ALL_EXPECTED if p not in actual_set]
     empty: list[str] = []
-    for rel in expected:
+    for rel in ALL_EXPECTED:
         full = root / rel
         if full.is_file() and full.stat().st_size == 0:
             empty.append(rel)
     mismatches: list[str] = []
     if expected_hashes:
-        for rel, expected_hash in expected_hashes.items():
+        for rel, expected in expected_hashes.items():
             full = root / rel
             if not full.is_file():
                 continue  # already reported as missing
-            if sha256_file(full) != expected_hash:
+            if sha256_file(full) != expected:
                 mismatches.append(rel)
     missing_dirs = [d for d in REQUIRED_DIRS if not (root / d).is_dir()]
     extra = sorted(actual_set - set(ALL_EXPECTED))
@@ -428,11 +404,9 @@ def run_tests(root: Path) -> tuple[bool, str]:
 
 
 def verify(root: Path, manifest_path: Path | None = None,
-           skip_compile: bool = False, skip_tests: bool = False,
-           skeleton: bool = False) -> VerificationResult:
+           skip_compile: bool = False, skip_tests: bool = False) -> VerificationResult:
     expected_hashes = load_manifest(manifest_path) if manifest_path else None
-    result = check_manifest(root, expected_hashes,
-                            expected=SKELETON_EXPECTED if skeleton else None)
+    result = check_manifest(root, expected_hashes)
     if skip_compile:
         result.compile_ok = None
     else:
@@ -500,9 +474,6 @@ def main(argv: list[str] | None = None) -> int:
                         help="frozen manifest.json to check hashes against")
     parser.add_argument("--write-manifest", default=None,
                         help="write a frozen manifest.json and exit 0")
-    parser.add_argument("--skeleton", action="store_true",
-                        help="verify only the skeleton set (first commit); "
-                             "full mode is the default merge gate")
     parser.add_argument("--skip-compile", action="store_true")
     parser.add_argument("--skip-tests", action="store_true")
     parser.add_argument("--json", action="store_true",
@@ -524,15 +495,13 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest_path = Path(args.manifest) if args.manifest else None
     result = verify(root, manifest_path,
-                    skip_compile=args.skip_compile, skip_tests=args.skip_tests,
-                    skeleton=args.skeleton)
+                    skip_compile=args.skip_compile, skip_tests=args.skip_tests)
     if args.json:
         print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
     else:
         print(report(result))
     if args.publish_evidence:
-        evidence = collect_evidence(root, result,
-                                    mode="skeleton" if args.skeleton else "full")
+        evidence = collect_evidence(root, result)
         out = Path(args.publish_evidence)
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n",

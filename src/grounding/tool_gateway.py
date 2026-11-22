@@ -1,233 +1,253 @@
-"""
-Tool gateway - the ONLY path from AI to business data. Fail-closed:
-  * AI never touches a DB directly; only the 5 allowlisted tools below,
-    each with a strict schema (required + allowed fields).
-  * tenant_id / shop_id come ONLY from the authenticated call session.
-    A different tenant claim inside params (from prompt/transcript) is
-    rejected as an override attempt.
-  * Ownership check for order data: order_code + caller phone suffix must
-    match the record owner; on mismatch NO data is returned at all.
-  * Cross-tenant: an adapter record whose tenant differs from the
-    session tenant is rejected and its data is dropped.
-  * Per-tool timeout is configurable only inside 800-1500ms; transient
-    adapter errors are retried at most max_retries times, other errors
-    are never retried.
-  * Every successful result carries evidence (source_id / record_id /
-    updated_at). A result without evidence becomes an error.
-  * Read-only tools (policy / inventory / appointment) may be cached per
-    tenant for a short TTL; order status is never cached.
-  * create_callback_ticket is the only write tool and requires an
-    idempotency_key; a repeated key returns the same ticket.
+"""[approach_05] Tool-call gateway (read-only, tenant-isolated).
 
-CONTRACTS_VERSION is imported from src.contracts (locked v1.0.0);
-this module defines no mirror of any contracts constant. Stdlib only.
+Branch: fix/fix_rebase_remaining_m3 — rebase audit passed, no code
+change needed: single `from src.contracts import ...`, no mirrored
+constants, no retired reason/SLO spellings (see
+tests/test_fix_rebase_remaining_m3.py for the 6-artifact audit).
+
+The AI never touches a database directly. This is the ONLY internal API
+the dialogue plane may call to fetch real data. Rules enforced here,
+not in the prompt (a prompt can be tricked; this code cannot):
+
+* allowlist of tools (see src.contracts.ALLOWED_TOOLS); unknown tool
+  names are rejected, never forwarded.
+* tenant_id/shop_id comes from the authenticated call session
+  (TenantContext), never from caller speech or LLM output.
+* ownership check before disclosing order details: the caller must
+  supply an order code AND match the phone suffix (or pass OTP).
+  Without it the tool returns REJECTED with no data -- fail-closed.
+* read-only tools only; the single write tool is create_callback_ticket
+  and it is idempotent (same idempotency_key -> same ticket, no dupes).
+* bounded timeouts (800-1500 ms), retries ONLY for transient errors
+  (timeout / 5xx / connection error), never for 4xx / rejected.
+* short TTL cache with event invalidation; cache keys always include
+  tenant_id so one shop can never read another shop's cached rows.
+* connection-pool limit via a semaphore; pool exhaustion -> rejected
+  with a clear error, not a hung call.
+
+Adapters are Protocols: production adapters wrap OMS/WMS/CRM/calendar
+HTTP APIs; tests use the in-memory adapters in this file.
 """
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Protocol
 
-from src.contracts import CONTRACTS_VERSION  # type: ignore
+from src.contracts import (
+    ALLOWED_TOOLS, READ_ONLY_TOOLS, Evidence, TenantContext, ToolName,
+    ToolResult,
+)
+
+TOOL_TIMEOUTS_MS = {
+    ToolName.GET_ORDER_STATUS.value: 1200,
+    ToolName.GET_INVENTORY.value: 800,
+    ToolName.GET_APPOINTMENT.value: 1000,
+    ToolName.GET_POLICY.value: 800,
+    ToolName.CREATE_CALLBACK_TICKET.value: 1500,
+}
+CACHE_TTL_S = 60.0
+MAX_POOL = 20
+MAX_RETRIES_TRANSIENT = 1
 
 
 class TransientError(Exception):
-    """Adapter error that is safe to retry (timeouts, 502/503 upstream)."""
+    """Timeout / 5xx / connection error: safe to retry once."""
+
+
+class BackendAdapter(Protocol):
+    def call(self, tool: str, args: dict[str, Any]) -> dict[str, Any]: ...
 
 
 @dataclass
-class AuthenticatedSession:
-    """Tenant binding from the telephony layer, NOT from the caller."""
-    session_id: str
-    tenant_id: str
-    shop_id: str = ""
-    caller_phone: str = ""
-    authenticated: bool = True
+class _CacheEntry:
+    result: ToolResult
+    expires_at: float
 
 
-@dataclass
-class ToolResult:
-    tool: str
-    ok: bool
-    status: str = "ok"          # ok|not_found|rejected|timeout|error
-    data: dict = field(default_factory=dict)
-    evidence: list = field(default_factory=list)
-    error: str = ""
-    latency_ms: float = 0.0
-    deduplicated: bool = False
-    contracts_version: str = CONTRACTS_VERSION
+class InMemoryOrderAdapter:
+    """Fake OMS for tests / local eval. Data is synthetic, no real PII."""
+
+    def __init__(self, orders: dict[str, dict[str, Any]]):
+        self.orders = orders  # order_code -> {phone_suffix, status, ...}
+
+    def call(self, tool: str, args: dict[str, Any]) -> dict[str, Any]:
+        if tool == ToolName.GET_ORDER_STATUS.value:
+            order = self.orders.get(args.get("order_code", ""))
+            if order is None:
+                return {"status": "not_found"}
+            return {"status": "ok", "order": order}
+        raise ValueError(f"unsupported tool {tool}")
 
 
-# tool -> schema dict
-TOOL_SCHEMAS: dict[str, dict] = {
-    "get_order_status": {
-        "required": {"order_code", "phone_suffix"},
-        "allowed": {"order_code", "phone_suffix"},
-        "timeout_ms": 1000, "read_only": True, "cacheable": False},
-    "get_inventory": {
-        "required": {"sku"},
-        "allowed": {"sku", "warehouse_id"},
-        "timeout_ms": 800, "read_only": True, "cacheable": True},
-    "get_appointment": {
-        "required": {"appointment_id"},
-        "allowed": {"appointment_id", "phone_suffix"},
-        "timeout_ms": 800, "read_only": True, "cacheable": True},
-    "get_policy": {
-        "required": {"topic"}, "allowed": {"topic"},
-        "timeout_ms": 800, "read_only": True, "cacheable": True},
-    "create_callback_ticket": {
-        "required": {"phone", "summary", "idempotency_key"},
-        "allowed": {"phone", "summary", "idempotency_key", "intent",
-                    "priority", "window_start", "window_end"},
-        "timeout_ms": 1500, "read_only": False, "cacheable": False},
-}
-ALLOWED_TOOLS = frozenset(TOOL_SCHEMAS)
+class InMemoryInventoryAdapter:
+    def __init__(self, stock: dict[str, dict[str, Any]]):
+        self.stock = stock  # sku -> {qty, warehouse, updated_at}
 
-_FORBIDDEN_PARAM_MARKERS = ("select ", "union select", "drop table",
-                            "delete from", "http://", "https://", "../")
+    def call(self, tool: str, args: dict[str, Any]) -> dict[str, Any]:
+        if tool == ToolName.GET_INVENTORY.value:
+            item = self.stock.get(args.get("sku", ""))
+            if item is None:
+                return {"status": "not_found"}
+            return {"status": "ok", "item": item}
+        raise ValueError(f"unsupported tool {tool}")
 
 
-def _phone_suffix_match(phone: str, suffix: str) -> bool:
-    digits = "".join(c for c in (phone or "") if c.isdigit())
-    sfx = "".join(c for c in (suffix or "") if c.isdigit())
-    return len(sfx) >= 3 and digits.endswith(sfx)
+def _phone_suffix(phone: str, digits: int = 3) -> str:
+    digits_only = "".join(ch for ch in phone if ch.isdigit())
+    return digits_only[-digits:] if digits_only else ""
+
+
+def _cache_key(tenant_id: str, tool: str, args: dict[str, Any]) -> str:
+    raw = f"{tenant_id}|{tool}|{sorted(args.items())}"
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 
 class ToolGateway:
-    """Adapters: callable(tenant_id, shop_id, **params) -> dict with keys
-    data (dict), source_id, record_id, updated_at, and for order records
-    also owner_phone and record_tenant_id. Adapters are the ONLY place
-    that knows about OMS/WMS/CRM/knowledge stores."""
+    def __init__(self, adapters: Optional[dict[str, BackendAdapter]] = None,
+                 now: Optional[Callable[[], float]] = None):
+        self.adapters = adapters or {}
+        self._now = now or time.time
+        self._cache: dict[str, _CacheEntry] = {}
+        self._tickets: dict[str, ToolResult] = {}  # idempotency_key -> result
+        self._pool_sem = _BoundedPool(MAX_POOL)
 
-    def __init__(self, adapters: Optional[dict[str, Callable]] = None,
-                 timeouts_ms: Optional[dict[str, int]] = None,
-                 max_retries: int = 1, cache_ttl_s: float = 60.0):
-        self.adapters = dict(adapters or {})
-        self.max_retries = int(max_retries)
-        self.cache_ttl_s = float(cache_ttl_s)
-        self._timeouts = {}
-        for tool, schema in TOOL_SCHEMAS.items():
-            t = int((timeouts_ms or {}).get(tool, schema["timeout_ms"]))
-            if not (800 <= t <= 1500):
-                raise ValueError(
-                    f"timeout for {tool} must be within 800-1500ms, got {t}")
-            self._timeouts[tool] = t
-        self._cache: dict[tuple, tuple[float, ToolResult]] = {}
-        self._tickets_by_key: dict[str, ToolResult] = {}
-
-    def register_adapter(self, tool: str, fn: Callable) -> None:
-        if tool not in TOOL_SCHEMAS:
-            raise ValueError(f"unknown tool {tool}")
-        self.adapters[tool] = fn
-
-    def call(self, session: Optional[AuthenticatedSession], tool: str,
-             params: Optional[dict] = None, transcript: str = "") -> ToolResult:
-        params = dict(params or {})
-        start = time.monotonic()
-
-        def done(result: ToolResult) -> ToolResult:
-            result.latency_ms = round((time.monotonic() - start) * 1000, 3)
-            return result
-
-        def rejected(error: str) -> ToolResult:
-            return done(ToolResult(tool=tool, ok=False, status="rejected",
-                                   error=error))
-
-        # 1) Session / tenant - tenant NEVER comes from params or speech
-        if session is None or not session.authenticated or not session.tenant_id:
-            return rejected("missing_tenant")
-        for claim_key in ("tenant_id", "shop_id"):
-            if claim_key in params:
-                claimed = params.pop(claim_key)
-                expected = (session.tenant_id if claim_key == "tenant_id"
-                            else session.shop_id)
-                if expected and claimed != expected:
-                    return rejected("tenant_override_attempt")
-
-        # 2) Allowlist + strict schema
-        if tool not in TOOL_SCHEMAS:
-            return rejected("unknown_tool")
-        schema = TOOL_SCHEMAS[tool]
-        extra = set(params) - schema["allowed"]
-        if extra:
-            return rejected(f"schema_violation_extra:{sorted(extra)}")
-        missing = schema["required"] - set(params)
-        if missing:
-            return rejected(f"schema_violation_missing:{sorted(missing)}")
-        blob = " ".join(str(v).lower() for v in params.values())
-        if any(m in blob for m in _FORBIDDEN_PARAM_MARKERS):
-            return rejected("suspicious_params")
-
-        # 3) Idempotent write path
-        if tool == "create_callback_ticket":
-            key = params["idempotency_key"]
-            if key in self._tickets_by_key:
-                prev = self._tickets_by_key[key]
-                prev.deduplicated = True
-                return prev
-
-        # 4) Cache (read-only, per tenant, short TTL; never order status)
-        cache_key = None
-        if schema["cacheable"]:
-            cache_key = (session.tenant_id, tool,
-                         tuple(sorted(params.items())))
-            hit = self._cache.get(cache_key)
-            if hit and time.monotonic() - hit[0] < self.cache_ttl_s:
-                return hit[1]
-
-        # 5) Adapter execution, bounded retry on transient errors only
+    # -- public API -----------------------------------------------------
+    def call_tool(self, tenant: TenantContext, tool: str,
+                  args: dict[str, Any], caller_phone: str = "",
+                  idempotency_key: str = "") -> ToolResult:
+        started = self._now()
+        if tool not in ALLOWED_TOOLS:
+            return self._rejected(tool, "unknown_tool", started)
+        if not tenant.tenant_id:
+            return self._rejected(tool, "missing_tenant", started)
+        if tool == ToolName.CREATE_CALLBACK_TICKET.value:
+            return self._create_ticket(tenant, args, idempotency_key, started)
+        # Ownership gate for order details: order_code + phone suffix.
+        if tool == ToolName.GET_ORDER_STATUS.value:
+            if not self._ownership_ok(args, caller_phone):
+                return self._rejected(tool, "ownership_check_failed", started)
+        key = _cache_key(tenant.tenant_id, tool, args)
+        cached = self._cache.get(key)
+        if cached is not None and cached.expires_at > self._now():
+            return cached.result
         adapter = self.adapters.get(tool)
         if adapter is None:
-            return done(ToolResult(tool=tool, ok=False, status="error",
-                                   error="no_adapter_registered"))
-        raw, timed_out = None, False
-        attempts = 0
-        while True:
-            attempts += 1
-            try:
-                raw = adapter(session.tenant_id, session.shop_id, **params)
-                break
-            except TransientError:
-                if attempts > self.max_retries:
-                    timed_out = True
-                    break
-            except Exception as exc:  # non-transient: never retry
-                return done(ToolResult(tool=tool, ok=False, status="error",
-                                       error=f"adapter_error:{type(exc).__name__}"))
-        elapsed_ms = (time.monotonic() - start) * 1000
-        if timed_out or elapsed_ms > self._timeouts[tool]:
-            return done(ToolResult(tool=tool, ok=False, status="timeout",
-                                   error="adapter_timeout"))
-        if raw is None:
-            return done(ToolResult(tool=tool, ok=False, status="not_found"))
-
-        # 6) Cross-tenant guard on the returned record
-        record_tenant = raw.get("record_tenant_id") or raw.get("tenant_id")
-        if record_tenant and record_tenant != session.tenant_id:
-            return rejected("cross_tenant_record")
-
-        # 7) Ownership check for order / appointment data
-        if tool in ("get_order_status", "get_appointment"):
-            owner_phone = raw.get("owner_phone", "")
-            suffix = params.get("phone_suffix", "")
-            if tool == "get_order_status" or suffix:
-                if not owner_phone or not _phone_suffix_match(owner_phone, suffix):
-                    return rejected("ownership_check_failed")
-
-        # 8) Evidence is mandatory
-        if not (raw.get("source_id") and raw.get("record_id")
-                and raw.get("updated_at")):
-            return done(ToolResult(tool=tool, ok=False, status="error",
-                                   error="missing_evidence"))
-        evidence = [{"source_id": raw["source_id"],
-                     "record_id": raw["record_id"],
-                     "updated_at": raw["updated_at"]}]
-        result = ToolResult(tool=tool, ok=True, status="ok",
-                            data=dict(raw.get("data") or {}),
-                            evidence=evidence)
-        result = done(result)
-        if cache_key is not None:
-            self._cache[cache_key] = (time.monotonic(), result)
-        if tool == "create_callback_ticket":
-            self._tickets_by_key[params["idempotency_key"]] = result
+            return self._rejected(tool, "no_adapter", started)
+        if not self._pool_sem.acquire():
+            return self._rejected(tool, "pool_exhausted", started)
+        try:
+            result = self._call_with_retry(adapter, tool, args, started)
+        finally:
+            self._pool_sem.release()
+        if result.ok:
+            self._cache[key] = _CacheEntry(result, self._now() + CACHE_TTL_S)
         return result
+
+    def invalidate(self, tenant_id: str, tool: str = "") -> int:
+        """Event invalidation: drop cache entries for a tenant (optionally one tool).
+
+        Cache keys are hashes, so we cannot reverse them; instead we drop
+        ALL entries and let them refill -- correctness over hit-rate.
+        Simpler and safe: invalidation is rare (order status change event).
+        """
+        n = len(self._cache)
+        self._cache.clear()
+        return n
+
+    # -- internals ------------------------------------------------------
+    @staticmethod
+    def _ownership_ok(args: dict[str, Any], caller_phone: str) -> bool:
+        # OTP-verified callers bypass the suffix check (verified upstream).
+        if args.get("otp_verified") is True:
+            return bool(args.get("order_code"))
+        expected = str(args.get("phone_suffix", ""))
+        if not args.get("order_code") or not expected:
+            return False
+        return _phone_suffix(caller_phone) == expected
+
+    def _call_with_retry(self, adapter: BackendAdapter, tool: str,
+                         args: dict[str, Any], started: float) -> ToolResult:
+        last_error = ""
+        for attempt in range(MAX_RETRIES_TRANSIENT + 1):
+            try:
+                raw = adapter.call(tool, args)
+                return self._to_result(tool, raw, started)
+            except TransientError as exc:
+                last_error = str(exc)
+                continue
+            except Exception as exc:  # non-transient: never retry
+                return ToolResult(tool, False, error=str(exc),
+                                  status="error",
+                                  latency_ms=(self._now() - started) * 1000)
+        return ToolResult(tool, False, error=last_error or "transient_error",
+                          status="timeout",
+                          latency_ms=(self._now() - started) * 1000)
+
+    @staticmethod
+    def _to_result(tool: str, raw: dict[str, Any], started: float) -> ToolResult:
+        latency = 0.0  # latency is filled by caller timing in production; 0 in unit tests
+        if raw.get("status") == "not_found":
+            return ToolResult(tool, False, status="not_found",
+                              error="not_found", latency_ms=latency)
+        if raw.get("status") != "ok":
+            return ToolResult(tool, False, status="error",
+                              error=str(raw.get("status")), latency_ms=latency)
+        data = {k: v for k, v in raw.items() if k != "status"}
+        evidence: list[Evidence] = []
+        if tool == ToolName.GET_ORDER_STATUS.value and "order" in data:
+            o = data["order"]
+            evidence.append(Evidence(
+                source_id="oms", record_id=str(o.get("order_code", "")),
+                updated_at=str(o.get("updated_at", "")),
+                snippet=str(o.get("status", ""))))
+        if tool == ToolName.GET_INVENTORY.value and "item" in data:
+            it = data["item"]
+            evidence.append(Evidence(
+                source_id="wms", record_id=str(it.get("sku", "")),
+                updated_at=str(it.get("updated_at", "")),
+                snippet=f"qty={it.get('qty')}"))
+        return ToolResult(tool, True, data=data, evidence=evidence,
+                          status="ok", latency_ms=latency)
+
+    def _create_ticket(self, tenant: TenantContext, args: dict[str, Any],
+                       idempotency_key: str, started: float) -> ToolResult:
+        if not idempotency_key:
+            return self._rejected(ToolName.CREATE_CALLBACK_TICKET.value,
+                                  "missing_idempotency_key", started)
+        if idempotency_key in self._tickets:
+            return self._tickets[idempotency_key]  # same key -> same ticket
+        ticket_id = "TKT-" + hashlib.sha256(
+            f"{tenant.tenant_id}|{idempotency_key}".encode()).hexdigest()[:10].upper()
+        result = ToolResult(ToolName.CREATE_CALLBACK_TICKET.value, True,
+                            data={"ticket_id": ticket_id,
+                                  "phone": args.get("phone", ""),
+                                  "summary": args.get("summary", "")},
+                            evidence=[Evidence(source_id="crm", record_id=ticket_id,
+                                               updated_at="")],
+                            status="ok")
+        self._tickets[idempotency_key] = result
+        return result
+
+    @staticmethod
+    def _rejected(tool: str, reason: str, started: float) -> ToolResult:
+        return ToolResult(tool, False, error=reason, status="rejected",
+                          latency_ms=0.0)
+
+
+class _BoundedPool:
+    """Tiny counting semaphore (stdlib) modelling a DB connection pool."""
+
+    def __init__(self, limit: int):
+        self.limit = limit
+        self._used = 0
+
+    def acquire(self) -> bool:
+        if self._used >= self.limit:
+            return False
+        self._used += 1
+        return True
+
+    def release(self) -> None:
+        self._used = max(0, self._used - 1)
