@@ -1,0 +1,142 @@
+[
+  {
+    "appointment_id": "AP1000",
+    "slot": "2026-11-23T14:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1001",
+    "slot": "2026-11-24T15:00:00+07:00",
+    "service": "tu_van",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1002",
+    "slot": "2026-11-25T16:00:00+07:00",
+    "service": "tu_van",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1003",
+    "slot": "2026-11-26T14:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1004",
+    "slot": "2026-11-27T15:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1005",
+    "slot": "2026-11-23T16:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1006",
+    "slot": "2026-11-24T14:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1007",
+    "slot": "2026-11-25T15:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1008",
+    "slot": "2026-11-26T16:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1009",
+    "slot": "2026-11-27T14:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1010",
+    "slot": "2026-11-23T15:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1011",
+    "slot": "2026-11-24T16:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1012",
+    "slot": "2026-11-25T14:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1013",
+    "slot": "2026-11-26T15:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1014",
+    "slot": "2026-11-27T16:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1015",
+    "slot": "2026-11-23T14:00:00+07:00",
+    "service": "sua_may_giat",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1016",
+    "slot": "2026-11-24T15:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1017",
+    "slot": "2026-11-25T16:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1018",
+    "slot": "2026-11-26T14:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  },
+  {
+    "appointment_id": "AP1019",
+    "slot": "2026-11-27T15:00:00+07:00",
+    "service": "bao_hanh",
+    "status": "confirmed",
+    "source": "synthetic"
+  }
+]

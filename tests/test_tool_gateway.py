@@ -1,4 +1,3 @@
- — phần 1/2
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.grounding.tool_gateway import (
@@ -68,7 +67,6 @@ def test_correct_lookup_returns_evidence():
     assert r.ok and r.data == {"status": "delivering"}
     ev = r.evidence[0]
     assert ev["source_id"] == "oms" and ev["record_id"] == "DH001" and ev["updated_at"]
-[[FILE tests/test_tool_gateway.py]] — phần 2/2 (nối tiếp, kết thúc file)
 
 def test_schema_missing_and_extra_fields_rejected():
     assert gw().call(sess(), "get_order_status", {"order_code": "DH001"}).error.startswith("schema_violation_missing")

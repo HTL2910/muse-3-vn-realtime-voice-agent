@@ -2,11 +2,8 @@
 
 fix/fix_missing_capacity_planner — approach_12.
 
-Self-contained, stdlib-only. No import from ``src.contracts``:
-rebase verification (fix_rebase_remaining_algo_ml) found no
-mirrored contract constant in this module — the only numbers are
-the 90 s patience benchmark, the 60/90 s callback band and
-internal loop bounds — so there is nothing to import.
+Self-contained, stdlib-only. No import from ``src.contracts`` (there
+is no contracts file on ``main`` yet).
 
 Why Erlang-A, not Erlang-C
 --------------------------

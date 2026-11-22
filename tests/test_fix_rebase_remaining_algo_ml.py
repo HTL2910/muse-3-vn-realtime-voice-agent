@@ -2,7 +2,7 @@
 
 Verifies the rebase of the 5 remaining algo-ml modules to
 src/contracts.py v1.0.0 (orchestrator was already rebased in
-fix_rebase_algo_ml_to_contracts — not redone here).
+fix_rebase_algo_ml_to_contracts, 16 passed — not redone here).
 
 Part A (always runs): the target file,
 src/voice/vietnamese_normalizer.py — version anchor, no mirrored
@@ -13,7 +13,6 @@ staged, and skipped (not failed) on a checkout where they have
 not landed yet, so this test never blocks their own merge.
 The full original suites (16 + 13 + 16 + 13 + 14 tests) run
 separately in this branch and must all stay green.
-Chưa chạy — kết quả thật do CI báo lại.
 """
 
 import inspect

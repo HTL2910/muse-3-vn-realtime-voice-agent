@@ -8,10 +8,9 @@ barge-in, backpressure, idempotency, filler, timeout, handoff)
 so the rebase is proven not to have broken behaviour.
 
 Imports use the repo-root layout (``src.realtime...``), the layout
-on main; the locked contracts surface is EscalationReason,
-MAX_CLARIFICATIONS, ASR_PARTIAL_MS, LLM_FIRST_TOKEN_MS,
-TTS_FIRST_AUDIO_MS, TOTAL_SLO_P95_MS, TOOL_CALL_OFF_PATH_MS.
-Chưa chạy — kết quả thật do CI báo lại.
+on main; on the VM a staging contracts stub implementing the locked
+v1.0.0 surface stands in for systems-arch's contracts file, which
+lands on main first by merge order.
 """
 
 import shutil
@@ -28,7 +27,7 @@ from src.contracts import (  # noqa: E402
     CONTRACTS_VERSION,
     LLM_FIRST_TOKEN_MS,
     MAX_CLARIFICATIONS,
-    TOOL_CALL_OFF_PATH_MS,
+    TOOL_CALL_MS,
     TOTAL_SLO_P95_MS,
     TTS_FIRST_AUDIO_MS,
     EscalationReason,
@@ -125,9 +124,9 @@ def test_orchestrator_budget_defaults_come_from_contracts():
     assert budget.llm_first_token_ms == LLM_FIRST_TOKEN_MS == 500
     assert budget.tts_first_audio_ms == TTS_FIRST_AUDIO_MS == 350
     assert budget.total_slo_p95_ms == TOTAL_SLO_P95_MS == 1200
-    # Debate decision, locked name: tool calls slower than 500 ms
-    # stay off the first-audio path — the pre-rebase 800 ms is superseded.
-    assert budget.tool_call_ms == TOOL_CALL_OFF_PATH_MS == 500
+    # Debate decision: tool calls slower than 500 ms stay off the
+    # first-audio path — the pre-rebase 800 ms is superseded.
+    assert budget.tool_call_ms == TOOL_CALL_MS == 500
     assert budget.streaming_total_ms == 1100
     assert budget.streaming_total_ms < budget.total_slo_p95_ms
     assert budget.jitter_headroom_ms == 100
@@ -159,7 +158,7 @@ def test_orchestrator_refuses_wrong_contracts_version(tmp_path):
         "MAX_CLARIFICATIONS = 1\n"
         "ASR_PARTIAL_MS = 250\nLLM_FIRST_TOKEN_MS = 500\n"
         "TTS_FIRST_AUDIO_MS = 350\nTOTAL_SLO_P95_MS = 1200\n"
-        "TOOL_CALL_OFF_PATH_MS = 500\n"
+        "TOOL_CALL_MS = 500\n"
         "from enum import Enum\n"
         "class EscalationReason(str, Enum):\n"
         '    OUT_OF_SCOPE = "out_of_scope"\n'

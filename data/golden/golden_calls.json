@@ -1,0 +1,162 @@
+{
+  "source": "synthetic scripts by council, no real PII",
+  "license": "synthetic, CC0",
+  "calls": [
+    {
+      "id": "GC-01",
+      "intent": "tra_don",
+      "skill": "order",
+      "transcript": [
+        "Khách: Cho tôi hỏi đơn hàng DH240101 thế nào rồi?",
+        "AI: Dạ, đơn DH240101 đang giao, dự kiến mai tới ạ."
+      ],
+      "slots": {
+        "order_code": "DH240101"
+      },
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-02",
+      "intent": "phi_ship",
+      "skill": "order",
+      "transcript": [
+        "Khách: Ship về Hà Nội bao nhiêu tiền?",
+        "AI: Dạ phí ship Hà Nội là 25 nghìn, miễn phí từ 500 nghìn ạ."
+      ],
+      "slots": {},
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-03",
+      "intent": "doi_tra",
+      "skill": "return_warranty",
+      "transcript": [
+        "Khách: Tôi muốn đổi size áo mua hôm qua được không?",
+        "AI: Dạ được ạ, trong 7 ngày, sản phẩm còn nguyên tem ạ."
+      ],
+      "slots": {},
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-04",
+      "intent": "bao_hanh",
+      "skill": "return_warranty",
+      "transcript": [
+        "Khách: Tai nghe mua 2 tháng bị rè, bảo hành thế nào?",
+        "AI: Dạ tai nghe bảo hành 12 tháng, anh mang ra cửa hàng để kiểm tra ạ."
+      ],
+      "slots": {},
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-05",
+      "intent": "dat_lich",
+      "skill": "booking",
+      "transcript": [
+        "Khách: Tôi muốn đặt lịch sửa máy giặt chiều mai.",
+        "AI: Dạ chiều mai còn 14 giờ và 16 giờ, anh chọn giờ nào ạ?"
+      ],
+      "slots": {},
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-06",
+      "intent": "huong_dan_su_dung",
+      "skill": "technical",
+      "transcript": [
+        "Khách: Nồi chiên không dầu dùng lần đầu cần làm gì?",
+        "AI: Dạ rửa khay, lau khô rồi chạy không tải 10 phút ạ."
+      ],
+      "slots": {},
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-07",
+      "intent": "khieu_nai_gay_gat",
+      "skill": "complaint",
+      "transcript": [
+        "Khách: Tôi khiếu nại, giao sai hàng 3 lần rồi, tôi muốn gặp quản lý!"
+      ],
+      "slots": {},
+      "expected": "handoff",
+      "reason": "sensitive",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-08",
+      "intent": "boi_thuong",
+      "skill": "complaint",
+      "transcript": [
+        "Khách: Hàng hỏng làm tôi thiệt hại, các anh phải bồi thường!"
+      ],
+      "slots": {},
+      "expected": "handoff",
+      "reason": "sensitive",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-09",
+      "intent": "ngoai_pham_vi",
+      "skill": "general",
+      "transcript": [
+        "Khách: Giá cổ phiếu công ty anh mai lên hay xuống?",
+        "AI: Dạ câu này ngoài phạm vi hỗ trợ, để em chuyển nhân viên ạ."
+      ],
+      "slots": {},
+      "expected": "handoff",
+      "reason": "out_of_scope",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-10",
+      "intent": "yeu_cau_gap_nguoi",
+      "skill": "general",
+      "transcript": [
+        "Khách: Tôi không muốn nói với máy, cho gặp người đi."
+      ],
+      "slots": {},
+      "expected": "handoff",
+      "reason": "customer_request",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-11",
+      "intent": "tra_don_khong_chac",
+      "skill": "order",
+      "transcript": [
+        "Khách: Đơn của tôi... mã gì đó... tôi không nhớ rõ."
+      ],
+      "slots": {},
+      "expected": "handoff",
+      "reason": "low_confidence",
+      "source": "synthetic"
+    },
+    {
+      "id": "GC-12",
+      "intent": "ton_kho",
+      "skill": "order",
+      "transcript": [
+        "Khách: Mẫu giày XYZ size 42 còn hàng không?",
+        "AI: Dạ còn 3 đôi ở kho Hà Nội ạ."
+      ],
+      "slots": {
+        "sku": "XYZ-42"
+      },
+      "expected": "answer",
+      "reason": "",
+      "source": "synthetic"
+    }
+  ]
+}

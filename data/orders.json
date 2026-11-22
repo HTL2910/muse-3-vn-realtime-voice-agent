@@ -1,0 +1,542 @@
+[
+  {
+    "order_code": "DH240101",
+    "phone_suffix": "754",
+    "phone_masked": "090***214",
+    "status": "dang_giao",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240102",
+    "phone_suffix": "350",
+    "phone_masked": "090***328",
+    "status": "da_giao",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240103",
+    "phone_suffix": "792",
+    "phone_masked": "090***858",
+    "status": "dang_giao",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240104",
+    "phone_suffix": "132",
+    "phone_masked": "090***130",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240105",
+    "phone_suffix": "338",
+    "phone_masked": "090***617",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240106",
+    "phone_suffix": "833",
+    "phone_masked": "090***765",
+    "status": "da_huy",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240107",
+    "phone_suffix": "559",
+    "phone_masked": "090***703",
+    "status": "dang_chuan_bi",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240108",
+    "phone_suffix": "877",
+    "phone_masked": "090***925",
+    "status": "da_giao",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240109",
+    "phone_suffix": "448",
+    "phone_masked": "090***384",
+    "status": "da_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240110",
+    "phone_suffix": "881",
+    "phone_masked": "090***444",
+    "status": "dang_giao",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240111",
+    "phone_suffix": "489",
+    "phone_masked": "090***199",
+    "status": "dang_chuan_bi",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240112",
+    "phone_suffix": "718",
+    "phone_masked": "090***370",
+    "status": "dang_giao",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240113",
+    "phone_suffix": "649",
+    "phone_masked": "090***227",
+    "status": "da_huy",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240114",
+    "phone_suffix": "665",
+    "phone_masked": "090***400",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240115",
+    "phone_suffix": "821",
+    "phone_masked": "090***171",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240116",
+    "phone_suffix": "891",
+    "phone_masked": "090***396",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240117",
+    "phone_suffix": "987",
+    "phone_masked": "090***203",
+    "status": "da_huy",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240118",
+    "phone_suffix": "564",
+    "phone_masked": "090***750",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240119",
+    "phone_suffix": "479",
+    "phone_masked": "090***463",
+    "status": "da_giao",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240120",
+    "phone_suffix": "818",
+    "phone_masked": "090***799",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240121",
+    "phone_suffix": "646",
+    "phone_masked": "090***846",
+    "status": "da_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240122",
+    "phone_suffix": "573",
+    "phone_masked": "090***488",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240123",
+    "phone_suffix": "801",
+    "phone_masked": "090***432",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240124",
+    "phone_suffix": "941",
+    "phone_masked": "090***132",
+    "status": "dang_chuan_bi",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240125",
+    "phone_suffix": "374",
+    "phone_masked": "090***167",
+    "status": "da_giao",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240126",
+    "phone_suffix": "317",
+    "phone_masked": "090***771",
+    "status": "da_huy",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240127",
+    "phone_suffix": "758",
+    "phone_masked": "090***569",
+    "status": "da_giao",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240128",
+    "phone_suffix": "242",
+    "phone_masked": "090***352",
+    "status": "dang_chuan_bi",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240129",
+    "phone_suffix": "697",
+    "phone_masked": "090***508",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240130",
+    "phone_suffix": "241",
+    "phone_masked": "090***621",
+    "status": "da_huy",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240131",
+    "phone_suffix": "873",
+    "phone_masked": "090***148",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240132",
+    "phone_suffix": "742",
+    "phone_masked": "090***263",
+    "status": "da_huy",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240133",
+    "phone_suffix": "494",
+    "phone_masked": "090***490",
+    "status": "da_huy",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240134",
+    "phone_suffix": "666",
+    "phone_masked": "090***981",
+    "status": "dang_giao",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240135",
+    "phone_suffix": "798",
+    "phone_masked": "090***649",
+    "status": "dang_chuan_bi",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240136",
+    "phone_suffix": "214",
+    "phone_masked": "090***400",
+    "status": "da_huy",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240137",
+    "phone_suffix": "564",
+    "phone_masked": "090***103",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240138",
+    "phone_suffix": "619",
+    "phone_masked": "090***208",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240139",
+    "phone_suffix": "256",
+    "phone_masked": "090***482",
+    "status": "da_giao",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240140",
+    "phone_suffix": "713",
+    "phone_masked": "090***431",
+    "status": "da_huy",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240141",
+    "phone_suffix": "214",
+    "phone_masked": "090***471",
+    "status": "dang_chuan_bi",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240142",
+    "phone_suffix": "159",
+    "phone_masked": "090***346",
+    "status": "dang_giao",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240143",
+    "phone_suffix": "849",
+    "phone_masked": "090***597",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240144",
+    "phone_suffix": "231",
+    "phone_masked": "090***775",
+    "status": "da_huy",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240145",
+    "phone_suffix": "371",
+    "phone_masked": "090***640",
+    "status": "da_huy",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240146",
+    "phone_suffix": "652",
+    "phone_masked": "090***873",
+    "status": "da_giao",
+    "total_vnd": 499000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240147",
+    "phone_suffix": "508",
+    "phone_masked": "090***787",
+    "status": "dang_chuan_bi",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240148",
+    "phone_suffix": "629",
+    "phone_masked": "090***562",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240149",
+    "phone_suffix": "330",
+    "phone_masked": "090***165",
+    "status": "dang_chuan_bi",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240150",
+    "phone_suffix": "702",
+    "phone_masked": "090***667",
+    "status": "da_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240151",
+    "phone_suffix": "107",
+    "phone_masked": "090***172",
+    "status": "dang_giao",
+    "total_vnd": 350000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240152",
+    "phone_suffix": "169",
+    "phone_masked": "090***132",
+    "status": "dang_chuan_bi",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240153",
+    "phone_suffix": "626",
+    "phone_masked": "090***343",
+    "status": "dang_chuan_bi",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240154",
+    "phone_suffix": "319",
+    "phone_masked": "090***652",
+    "status": "da_giao",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240155",
+    "phone_suffix": "348",
+    "phone_masked": "090***903",
+    "status": "da_huy",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240156",
+    "phone_suffix": "294",
+    "phone_masked": "090***196",
+    "status": "dang_giao",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240157",
+    "phone_suffix": "462",
+    "phone_masked": "090***533",
+    "status": "da_huy",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240158",
+    "phone_suffix": "984",
+    "phone_masked": "090***846",
+    "status": "dang_giao",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240159",
+    "phone_suffix": "162",
+    "phone_masked": "090***512",
+    "status": "dang_chuan_bi",
+    "total_vnd": 199000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "order_code": "DH240160",
+    "phone_suffix": "354",
+    "phone_masked": "090***296",
+    "status": "da_giao",
+    "total_vnd": 1290000,
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  }
+]

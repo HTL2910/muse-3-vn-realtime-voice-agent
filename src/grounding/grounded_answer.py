@@ -1,17 +1,19 @@
 """Grounded answering, fail-closed, with a mandatory anti-hallucination verifier.
 
-fix/fix_rebase_remaining_algo_ml — approach_06, rebased to
-``src/contracts.py`` v1.0.0 (locked spec).
+fix/fix_missing_grounded_answer — approach_06.
 
-No dependency on the tool gateway: evidence is passed in as data,
-so this module can be tested in isolation and the gateway can be
-wired in later without changing the verifier. All escalation
-reasons come from the contracts ``EscalationReason`` enum — no
-reason string is written literally anywhere in this module
-anymore, so a renamed reason breaks loudly at the call site
-instead of silently producing a routing code no agent recognises.
-Containment (answered from verified evidence AND no callback on
-the same issue within 72h) is defined in contracts.
+Self-contained, stdlib-only. No import from ``src.contracts`` (there
+is no contracts file on ``main`` yet) and no dependency on the tool
+gateway: evidence is passed in as data, so this module can be tested
+in isolation and the gateway can be wired in later without changing
+the verifier. The locked values mirror the contract agreed in
+COUNCIL_BUG_DEBATE (move verbatim into ``src/contracts.py`` v1.0.0):
+
+* Escalation reasons are snake_case: ``out_of_scope``,
+  ``low_confidence``, ``sensitive``, ``customer_request``,
+  ``repeated_clarification``, ``repeated_failure``.
+* Containment = answered from verified evidence AND no callback on
+  the same issue within 72h.
 
 Rules (fail-closed, in order — the first failure wins)
 ------------------------------------------------------
@@ -43,26 +45,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Sequence, Set
-
-# --- Locked contract values: imported, never mirrored -------------------
-# Two import forms cover both layouts: repo-root on sys.path
-# (``src.contracts``, the layout on main) and ``src/`` on sys.path.
-try:
-    from src.contracts import (  # type: ignore
-        CONTRACTS_VERSION,
-        EscalationReason,
-    )
-except ImportError:  # pragma: no cover - alternate layout only
-    from contracts import (  # type: ignore
-        CONTRACTS_VERSION,
-        EscalationReason,
-    )
-
-if CONTRACTS_VERSION != "1.0.0":
-    raise RuntimeError(
-        f"grounded_answer requires src/contracts.py v1.0.0, "
-        f"got {CONTRACTS_VERSION!r}"
-    )
 
 __all__ = [
     "AnswerStatus",
@@ -259,26 +241,26 @@ class GroundedAnswerer:
         self.current_policy_version = current_policy_version
 
     # -- internal gates ---------------------------------------------------
-    def _unknown(self, reason: str, escalation: EscalationReason) -> GroundedAnswer:
+    def _unknown(self, reason: str, escalation: str) -> GroundedAnswer:
         return GroundedAnswer(AnswerStatus.UNKNOWN, APOLOGY_HANDOFF_TEXT,
-                              reason=reason, escalation_reason=escalation.value)
+                              reason=reason, escalation_reason=escalation)
 
-    def _rejected(self, reason: str, escalation: EscalationReason) -> GroundedAnswer:
+    def _rejected(self, reason: str, escalation: str) -> GroundedAnswer:
         return GroundedAnswer(AnswerStatus.REJECTED, APOLOGY_HANDOFF_TEXT,
-                              reason=reason, escalation_reason=escalation.value)
+                              reason=reason, escalation_reason=escalation)
 
     def _gate(self, intent: str, evidence: Sequence[Evidence], draft: str = ""):
         """Return a GroundedAnswer if a gate fails, else None."""
         lowered_intent = intent.lower()
         if lowered_intent in self.blacklist:
-            return self._rejected("blacklisted_intent", EscalationReason.SENSITIVE)
+            return self._rejected("blacklisted_intent", "sensitive")
         haystack = (intent + " " + draft).lower()
         if any(topic in haystack for topic in BLACKLIST_TOPICS):
-            return self._rejected("sensitive_topic", EscalationReason.SENSITIVE)
+            return self._rejected("sensitive_topic", "sensitive")
         if lowered_intent not in self.whitelist:
-            return self._unknown("intent_not_whitelisted", EscalationReason.OUT_OF_SCOPE)
+            return self._unknown("intent_not_whitelisted", "out_of_scope")
         if not evidence:
-            return self._unknown("no_record", EscalationReason.OUT_OF_SCOPE)
+            return self._unknown("no_record", "out_of_scope")
         return None
 
     def _check_contradictions(self, evidence: Sequence[Evidence]):
@@ -288,8 +270,7 @@ class GroundedAnswerer:
                 val = str(value)
                 if key in seen and seen[key] != val:
                     return self._rejected(
-                        f"contradictory_evidence:{key}",
-                        EscalationReason.LOW_CONFIDENCE)
+                        f"contradictory_evidence:{key}", "low_confidence")
                 seen[key] = val
         return None
 
@@ -305,8 +286,7 @@ class GroundedAnswerer:
                    if f not in merged or merged[f] in (None, "")]
         if missing:
             return self._unknown(
-                f"missing_required_field:{','.join(missing)}",
-                EscalationReason.LOW_CONFIDENCE), merged
+                f"missing_required_field:{','.join(missing)}", "low_confidence"), merged
         return None, merged
 
     def _check_policy(self, evidence: Sequence[Evidence]):
@@ -314,7 +294,7 @@ class GroundedAnswerer:
             return None
         for ev in evidence:
             if ev.policy_version and ev.policy_version != self.current_policy_version:
-                return self._rejected("stale_policy", EscalationReason.LOW_CONFIDENCE)
+                return self._rejected("stale_policy", "low_confidence")
         return None
 
     def _verify_numbers_and_dates(self, text: str, evidence: Sequence[Evidence]):
@@ -329,16 +309,13 @@ class GroundedAnswerer:
         ev_codes = set(_CODE_RE.findall(blob))
         for num in extract_numbers(text):
             if num not in ev_numbers:
-                return self._rejected(f"numeric_mismatch:{num:g}",
-                                      EscalationReason.LOW_CONFIDENCE)
+                return self._rejected(f"numeric_mismatch:{num:g}", "low_confidence")
         for date in extract_dates(text):
             if date not in ev_dates:
-                return self._rejected(f"date_mismatch:{date}",
-                                      EscalationReason.LOW_CONFIDENCE)
+                return self._rejected(f"date_mismatch:{date}", "low_confidence")
         for code in _CODE_RE.findall(text):
             if code not in ev_codes:
-                return self._rejected(f"code_mismatch:{code}",
-                                      EscalationReason.LOW_CONFIDENCE)
+                return self._rejected(f"code_mismatch:{code}", "low_confidence")
         return None
 
     # -- public API ---------------------------------------------------------

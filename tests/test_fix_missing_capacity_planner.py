@@ -3,7 +3,6 @@
 Stdlib-only (pytest). Edge cases: c=1 matches M/M/1, overload
 returns prob_wait -> 1 with overloaded=True and no negative/NaN,
 and a deterministic peak simulation.
-Chưa chạy — kết quả thật do CI báo lại.
 """
 
 import sys

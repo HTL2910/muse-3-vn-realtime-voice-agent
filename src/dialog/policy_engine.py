@@ -1,4 +1,3 @@
- — phần 1/2
 """
 Policy engine - hard rules that ALWAYS win over the confidence gate.
 
@@ -117,7 +116,6 @@ _COMPENSATION_DRAFT = ["se boi thuong", "cam ket boi thuong",
 _LEGAL_DRAFT = ["cam ket phap ly", "chac chan thang kien",
                 "dam bao ve mat phap ly",
                 "chung toi chiu trach nhiem phap ly"]
-[[FILE src/dialog/policy_engine.py]] — phần 2/2 (nối tiếp, kết thúc file)
 
 class PolicyEngine:
     """Rule + lightweight classifier running in parallel with the LLM.

@@ -1,0 +1,37 @@
+[
+  {
+    "sku": "XYZ-42",
+    "qty": 4,
+    "warehouse": "HCM",
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "sku": "XYZ-43",
+    "qty": 5,
+    "warehouse": "HCM",
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "sku": "ABC-38",
+    "qty": 14,
+    "warehouse": "HN",
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "sku": "DEF-01",
+    "qty": 2,
+    "warehouse": "HCM",
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  },
+  {
+    "sku": "GHI-10",
+    "qty": 17,
+    "warehouse": "HN",
+    "updated_at": "2026-11-22T10:00:00+07:00",
+    "source": "synthetic"
+  }
+]

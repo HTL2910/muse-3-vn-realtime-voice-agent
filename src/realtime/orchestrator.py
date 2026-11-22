@@ -1,24 +1,20 @@
 """Realtime orchestrator: streaming ASR -> LLM -> TTS pipeline.
 
 fix/fix_rebase_algo_ml_to_contracts — approach_02, rebased to
-``src/contracts.py`` v1.0.0 (locked spec).
+``src/contracts.py`` v1.0.0.
 
 All locked values are imported from contracts — nothing is mirrored
-here anymore. Import fails loudly if the contracts version is not
-1.0.0: a drifted contract must break the import, never silently
-run with wrong constants. NOTE: the systems-arch m3 contracts
-proposal (``CONTRACTS_VERSION = "1.0.0-m3"``, enum ``HandoffReason``,
-``user_requested``) does NOT match the locked spec yet — it must be
-reconciled to ``EscalationReason`` / ``customer_request`` / 1.0.0
-before merge, or this module (correctly) refuses to import.
+here anymore (the pre-rebase version carried literal copies because
+contracts did not exist on main yet). Import fails loudly if the
+contracts version is not 1.0.0: a drifted contract must break the
+import, never silently run with wrong constants.
 
 Locked values (defined in contracts, used here):
 * Latency budget: ASR partial <= 250 ms + LLM first-token <= 500 ms
   + TTS first-audio <= 350 ms = 1100 ms, leaving 100 ms jitter inside
   the total SLO p95 < 1200 ms.
-* Tool calls slower than 500 ms stay off the first-audio path
-  (``TOOL_CALL_OFF_PATH_MS``; the pre-rebase value of 800 ms is
-  superseded by the debate decision).
+* Tool calls slower than 500 ms stay off the first-audio path (the
+  pre-rebase value of 800 ms is superseded by the debate decision).
 * ``MAX_CLARIFICATIONS = 1`` (confirmed in bug debate, not 2).
 * Escalation reasons are the ``EscalationReason`` enum, snake_case
   only — ``customer_request``, never ``user_requested``.
@@ -66,7 +62,7 @@ try:
         CONTRACTS_VERSION,
         LLM_FIRST_TOKEN_MS,
         MAX_CLARIFICATIONS,
-        TOOL_CALL_OFF_PATH_MS,
+        TOOL_CALL_MS,
         TOTAL_SLO_P95_MS,
         TTS_FIRST_AUDIO_MS,
         EscalationReason,
@@ -77,7 +73,7 @@ except ImportError:  # pragma: no cover - alternate layout only
         CONTRACTS_VERSION,
         LLM_FIRST_TOKEN_MS,
         MAX_CLARIFICATIONS,
-        TOOL_CALL_OFF_PATH_MS,
+        TOOL_CALL_MS,
         TOTAL_SLO_P95_MS,
         TTS_FIRST_AUDIO_MS,
         EscalationReason,
@@ -141,7 +137,7 @@ class LatencyBudget:
     tts_first_audio_ms: int = TTS_FIRST_AUDIO_MS
     total_slo_p95_ms: int = TOTAL_SLO_P95_MS
     # A heavy tool call must never sit on the first-audio path.
-    tool_call_ms: int = TOOL_CALL_OFF_PATH_MS
+    tool_call_ms: int = TOOL_CALL_MS
     # Hard timeouts per stage (abort, do not hang the call).
     llm_timeout_ms: int = 5000
     tts_timeout_ms: int = 3000

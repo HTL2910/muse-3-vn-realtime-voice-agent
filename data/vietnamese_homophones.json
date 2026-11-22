@@ -1,0 +1,36 @@
+{
+  "source": "synthetic dictionary built for the normalizer; not a linguistic corpus",
+  "license": "synthetic, CC0",
+  "pairs": [
+    {
+      "a": "đơn",
+      "b": "đờn",
+      "note": "homophone in fast speech"
+    },
+    {
+      "a": "ship",
+      "b": "síp",
+      "note": "loanword spelling variant"
+    },
+    {
+      "a": "size",
+      "b": "sai",
+      "note": "loanword / Vietnamese word collision"
+    },
+    {
+      "a": "mã đơn",
+      "b": "má đơn",
+      "note": "tone confusion"
+    },
+    {
+      "a": "bảo hành",
+      "b": "bảo hànhh",
+      "note": "ASR duplication"
+    }
+  ],
+  "entity_patterns": {
+    "order_code": "DH\\d{6}",
+    "phone": "0\\d{9}",
+    "sku": "[A-Z]{2,4}-\\d{2,3}"
+  }
+}

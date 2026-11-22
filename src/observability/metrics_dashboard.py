@@ -1,4 +1,3 @@
- — phần 1/2
 """
 Metrics & dashboard - honest containment measurement.
 
@@ -140,10 +139,6 @@ class MetricsDashboard:
 
     def _final_contained(self, c: CallRecord) -> bool:
         return c.provisional_contained and not c.repeat_same_issue
-
-
-
-[[FILE src/observability/metrics_dashboard.py]] — phần 2/2 (nối tiếp, kết thúc file)
 
     def compute(self, now: Optional[float] = None) -> dict:
         now = time.time() if now is None else float(now)

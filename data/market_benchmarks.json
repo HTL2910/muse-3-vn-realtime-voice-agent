@@ -1,0 +1,71 @@
+{
+  "note": "Figures quoted in the brief, with source + reliability label. Use the range, never a single absolute number, when presenting externally.",
+  "records": [
+    {
+      "metric": "vietnam_cloud_contact_center_2025_usd_m",
+      "value": 192.9,
+      "to_2034_usd_m": 855.3,
+      "cagr": 0.1745,
+      "source": "IMARC Group — Vietnam Cloud Based Contact Center Market",
+      "reliability": "research_firm_forecast",
+      "reliability_class": "forecast"
+    },
+    {
+      "metric": "call_abandonment_avg_pct",
+      "value": 8.4,
+      "source": "ContactBabel UK 2024 (n=225), via Ainora",
+      "reliability": "benchmark_international_not_vn",
+      "reliability_class": "benchmark",
+      "gap": "No Vietnam-specific abandonment rate was found."
+    },
+    {
+      "metric": "call_abandonment_industry_standard_pct",
+      "value": 5.0,
+      "source": "SQM Group, via Ringly 2026",
+      "reliability": "benchmark_international_not_vn",
+      "reliability_class": "benchmark"
+    },
+    {
+      "metric": "voice_ai_global_2025_usd_b",
+      "value": 2.54,
+      "to_2033_usd_b": 35.24,
+      "cagr": 0.39,
+      "source": "Grand View Research, via RaftLabs",
+      "reliability": "research_firm_forecast_range",
+      "reliability_class": "forecast"
+    },
+    {
+      "metric": "klarna_ai_containment_pct",
+      "value": 67,
+      "source": "Klarna / Twig case study",
+      "reliability": "vendor_case_study",
+      "reliability_class": "vendor",
+      "lesson": "AI answered easy cases at scale, then had to re-hire humans for complex cases."
+    },
+    {
+      "metric": "ada_auto_resolution_pct",
+      "value": 52,
+      "source": "Ada (550+ deployments)",
+      "reliability": "vendor_self_reported",
+      "reliability_class": "vendor"
+    },
+    {
+      "metric": "independent_voice_agent_multistep_pct_range",
+      "value": [
+        26,
+        38
+      ],
+      "source": "DigyAI 2026 synthesis",
+      "reliability": "independent",
+      "reliability_class": "independent"
+    },
+    {
+      "metric": "vietnam_bpo_2024_usd_b",
+      "value": 2.5,
+      "to_2028_usd_b": 3.6,
+      "source": "Ken Research 2024, via StealthAgents",
+      "reliability": "research_firm_forecast",
+      "reliability_class": "forecast"
+    }
+  ]
+}

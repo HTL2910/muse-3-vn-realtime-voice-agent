@@ -1,4 +1,3 @@
- — phần 1/2
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.observability.metrics_dashboard import (
@@ -68,10 +67,6 @@ def test_escalation_reasons_and_correct_department():
     assert s["escalation_rate"] == 1.0
     assert s["escalation_by_reason"] == {"sensitive": 1, "out_of_scope": 1}
     assert s["correct_department_rate"] == 0.5 and s["containment_final_rate"] == 0.0
-
-
-
-[[FILE tests/test_metrics_dashboard.py]] — phần 2/2 (nối tiếp, kết thúc file)
 
 def test_abandonment_wait_fcr_aht_csat():
     d = MetricsDashboard()

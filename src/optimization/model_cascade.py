@@ -3,10 +3,8 @@
 fix/fix_missing_model_cascade — approach_15 (P1: not on the core
 call path, but required before go-live).
 
-Self-contained, stdlib-only. No import from ``src.contracts``:
-rebase verification (fix_rebase_remaining_algo_ml) found no
-mirrored contract constant in this module — the only SLO number
-is in prose — so there is nothing to import.
+Self-contained, stdlib-only. No import from ``src.contracts`` (there
+is no contracts file on ``main`` yet).
 
 Design
 ------

@@ -3,7 +3,6 @@
 Stdlib-only (pytest). WER is asserted per (region, noise) cell —
 never as one overall number — on a small noisy multi-voice set
 built into this file, because data/golden/ is not on main yet.
-Chưa chạy — kết quả thật do CI báo lại.
 """
 
 import sys

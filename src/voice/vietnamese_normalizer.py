@@ -1,7 +1,7 @@
 """Vietnamese normalizer: 3 dialects, noise, slurred speech, entities.
 
 fix/fix_rebase_remaining_algo_ml — approach_03, rebased to
-``src/contracts.py`` v1.0.0 (locked spec).
+``src/contracts.py`` v1.0.0.
 
 Rebase verification (this module's contract surface is empty):
 a grep over the pre-rebase file found NO mirrored contract

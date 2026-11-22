@@ -1,15 +1,17 @@
 """Confidence gate: calibrated, cost-sensitive answer / clarify / escalate.
 
-fix/fix_rebase_remaining_algo_ml — approach_07 (P0, business-critical),
-rebased to ``src/contracts.py`` v1.0.0 (locked spec).
+fix/fix_missing_confidence_gate — approach_07 (P0, business-critical).
 
-All locked values are imported from contracts — nothing is mirrored
-here anymore. Import fails loudly if the contracts version is not
-1.0.0. The gate's own numbers stay local because they are not
-contract values: the 0.85 / 0.60 zones are tenant-configurable and
-``GateConfig.from_costs`` derives the answer threshold from the
-tenant's own costs (100 / 15 -> exactly 0.85), so they must not
-be frozen into contracts.
+Self-contained, stdlib-only. No import from ``src.contracts`` (there
+is no contracts file on ``main`` yet). The locked values mirror the
+contract agreed in COUNCIL_BUG_DEBATE (move verbatim into
+``src/contracts.py`` v1.0.0):
+
+* ``MAX_CLARIFICATIONS = 1`` — one clarification, then escalate.
+* Escalation reasons are snake_case: ``out_of_scope``,
+  ``low_confidence``, ``sensitive``, ``customer_request``,
+  ``repeated_clarification``, ``repeated_failure``.
+* Default zones: >= 0.85 answer, 0.60-0.85 clarify, < 0.60 escalate.
 
 Why this module is P0
 ----------------------
@@ -50,31 +52,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Sequence, Tuple
 
-# --- Locked contract values: imported, never mirrored -------------------
-# Two import forms cover both layouts: repo-root on sys.path
-# (``src.contracts``, the layout on main) and ``src/`` on sys.path.
-try:
-    from src.contracts import (  # type: ignore
-        CONTRACTS_VERSION,
-        MAX_CLARIFICATIONS,
-        EscalationReason,
-    )
-except ImportError:  # pragma: no cover - alternate layout only
-    from contracts import (  # type: ignore
-        CONTRACTS_VERSION,
-        MAX_CLARIFICATIONS,
-        EscalationReason,
-    )
-
-if CONTRACTS_VERSION != "1.0.0":
-    raise RuntimeError(
-        f"confidence_gate requires src/contracts.py v1.0.0, "
-        f"got {CONTRACTS_VERSION!r}"
-    )
-
-# Derived from the contracts enum (not a literal copy).
-ESCALATION_REASONS = frozenset(r.value for r in EscalationReason)
-
 __all__ = [
     "Decision",
     "GateConfig",
@@ -83,11 +60,21 @@ __all__ = [
     "TemperatureCalibrator",
     "IsotonicCalibrator",
     "ConfidenceGate",
-    "CONTRACTS_VERSION",
     "MAX_CLARIFICATIONS",
     "ESCALATION_REASONS",
     "DEFAULT_WEIGHTS",
 ]
+
+MAX_CLARIFICATIONS = 1
+
+ESCALATION_REASONS = frozenset({
+    "out_of_scope",
+    "low_confidence",
+    "sensitive",
+    "customer_request",
+    "repeated_clarification",
+    "repeated_failure",
+})
 
 DEFAULT_WEIGHTS: Dict[str, float] = {
     "asr": 0.15,
@@ -339,12 +326,10 @@ class ConfidenceGate:
         # Hard rule: no evidence -> escalate, whatever the other signals say.
         # Answering without verified data is exactly the Klarna failure.
         if not signals.has_evidence:
-            return _decide(Decision.ESCALATE, "missing_evidence",
-                           EscalationReason.LOW_CONFIDENCE.value, "escalate")
+            return _decide(Decision.ESCALATE, "missing_evidence", "low_confidence", "escalate")
         # Hard rule: a failed verifier (score < 0.5) blocks answering.
         if signals.verifier_score < 0.5:
-            return _decide(Decision.ESCALATE, "verifier_failed",
-                           EscalationReason.LOW_CONFIDENCE.value, "escalate")
+            return _decide(Decision.ESCALATE, "verifier_failed", "low_confidence", "escalate")
 
         # Two competing intents close together: clarify once, then escalate.
         if top_intents and len(top_intents) >= 2:
@@ -353,7 +338,7 @@ class ConfidenceGate:
                 if clarifications_used < cfg.max_clarifications:
                     return _decide(Decision.CLARIFY, "competing_intents", None, "clarify")
                 return _decide(Decision.ESCALATE, "competing_intents_after_clarify",
-                               EscalationReason.REPEATED_CLARIFICATION.value, "escalate")
+                               "repeated_clarification", "escalate")
 
         if confidence >= cfg.answer_threshold:
             return _decide(Decision.ANSWER, "above_answer_threshold", None, "answer")
@@ -361,9 +346,8 @@ class ConfidenceGate:
             if clarifications_used < cfg.max_clarifications:
                 return _decide(Decision.CLARIFY, "below_answer_threshold", None, "clarify")
             return _decide(Decision.ESCALATE, "clarification_budget_exhausted",
-                           EscalationReason.REPEATED_CLARIFICATION.value, "escalate")
-        return _decide(Decision.ESCALATE, "below_clarify_threshold",
-                       EscalationReason.LOW_CONFIDENCE.value, "escalate")
+                           "repeated_clarification", "escalate")
+        return _decide(Decision.ESCALATE, "below_clarify_threshold", "low_confidence", "escalate")
 
     def record_outcome(self, confidence: float, correct: bool) -> None:
         """Record whether an answered turn was actually right.

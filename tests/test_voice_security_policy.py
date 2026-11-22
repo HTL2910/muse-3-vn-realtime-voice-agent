@@ -1,4 +1,3 @@
- — phần 1/2
 import sys, os, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.security.voice_security_policy import (
@@ -59,10 +58,6 @@ def test_log_redaction_contains_no_raw_phone_or_address():
     assert "0901234567" not in out and "a@example.com" not in out
     assert "123 Le Loi" not in out and "079123456789" not in out
     assert not contains_raw_pii(out)
-
-
-
-[[FILE tests/test_voice_security_policy.py]] — phần 2/2 (nối tiếp, kết thúc file)
 
 class FakeRes:
     def __init__(self): self.closed = False

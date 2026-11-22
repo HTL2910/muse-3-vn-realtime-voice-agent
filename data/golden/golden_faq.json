@@ -1,0 +1,34 @@
+{
+  "source": "synthetic, approved answers in this file",
+  "license": "synthetic, CC0",
+  "qa": [
+    {
+      "id": "FAQ-01",
+      "question": "Đổi trả trong bao lâu?",
+      "expected_chunk_id": "policy-return-c0001",
+      "answer": "Đổi trả trong 7 ngày, sản phẩm còn nguyên tem.",
+      "source": "synthetic"
+    },
+    {
+      "id": "FAQ-02",
+      "question": "Phí ship về Hà Nội là bao nhiêu?",
+      "expected_chunk_id": "policy-shipping-c0002",
+      "answer": "Phí ship Hà Nội 25.000đ, miễn phí từ 500.000đ.",
+      "source": "synthetic"
+    },
+    {
+      "id": "FAQ-03",
+      "question": "Tai nghe bảo hành bao lâu?",
+      "expected_chunk_id": "policy-warranty-c0003",
+      "answer": "Tai nghe bảo hành 12 tháng.",
+      "source": "synthetic"
+    },
+    {
+      "id": "FAQ-04",
+      "question": "Tra cứu đơn hàng cần gì?",
+      "expected_chunk_id": "policy-order-c0004",
+      "answer": "Cần mã đơn và 3 số cuối số điện thoại đặt hàng.",
+      "source": "synthetic"
+    }
+  ]
+}

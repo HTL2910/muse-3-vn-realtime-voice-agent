@@ -2,7 +2,6 @@
 
 Stdlib-only (pytest). Routing, TTL expiry, the no-cross-session
 order-cache rule, speech shortening, and cost / Pareto measurement.
-Chưa chạy — kết quả thật do CI báo lại.
 """
 
 import sys
