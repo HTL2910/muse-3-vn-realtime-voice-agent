@@ -1,23 +1,22 @@
 """
-Metrics & dashboard (approach_19) - honest containment measurement.
+Metrics & dashboard - honest containment measurement.
 
 Containment, two locked layers (contracts v1.0.0):
   * provisional: call ended, AI handled it, no escalation, not abandoned,
-    AND the answer was backed by verified evidence (evidence_verified).
+    AND the answer was backed by verified evidence.
   * final (THE KPI - the only containment number that may be committed):
     provisional AND the same customer did not call back about the same
     issue within CONTAINMENT_WINDOW_HOURS imported from src.contracts -
-    FIXED at 72h in v1.0.0, not a local option. Cost-per-contained is
-    always computed on the FINAL layer (cost_per_contained_call).
+    FIXED at 72h, not a local option. Cost-per-contained is always
+    computed on the FINAL layer.
 
 Every call carries one trace_id across media-dialog-data-handoff.
-Transcripts are PII-redacted BEFORE analytics storage; recordings /
-transcripts at rest are referenced, not embedded, and purged by retention.
-Internal measurements are always reported separately from international /
-vendor benchmarks - benchmarks are never merged into internal KPIs, and
-this module never claims an 80% resolution rate.
+Transcripts are PII-redacted BEFORE analytics storage. Internal
+measurements are always reported separately from international/vendor
+benchmarks - benchmarks are never merged into internal KPIs, and this
+module never claims an 80% resolution rate.
 
-Contracts: EscalationReason / CONTAINMENT_WINDOW_HOURS / TOTAL_SLO_P95_MS /
+EscalationReason / CONTAINMENT_WINDOW_HOURS / TOTAL_SLO_P95_MS /
 CONTRACTS_VERSION are imported from src.contracts; NO mirror is defined.
 """
 from __future__ import annotations
@@ -32,7 +31,8 @@ from enum import Enum
 from typing import Any, Optional
 
 from src.contracts import (  # type: ignore
-    EscalationReason, CONTAINMENT_WINDOW_HOURS, TOTAL_SLO_P95_MS, CONTRACTS_VERSION)
+    EscalationReason, CONTAINMENT_WINDOW_HOURS, TOTAL_SLO_P95_MS,
+    CONTRACTS_VERSION)
 
 
 _PHONE_RE = re.compile(r"\b0\d{9}\b")
@@ -44,7 +44,8 @@ def redact_pii(text: str) -> str:
     if not text:
         return text or ""
     out = _EMAIL_RE.sub("[EMAIL]", text)
-    out = _PHONE_RE.sub(lambda m: m.group(0)[:2] + "******" + m.group(0)[-2:], out)
+    out = _PHONE_RE.sub(
+        lambda m: m.group(0)[:2] + "******" + m.group(0)[-2:], out)
     out = _ID_RE.sub("[ID]", out)
     return out
 
@@ -78,15 +79,15 @@ class CallRecord:
     abandoned: bool = False
     resolved_first_contact: bool = False
     csat: Optional[float] = None        # 1..5
-    cost: float = 0.0                    # total AI cost for this call (USD)
+    cost: float = 0.0
     ai_minutes: float = 0.0
-    latencies_ms: dict = field(default_factory=dict)   # asr/llm/tts/total
+    latencies_ms: dict = field(default_factory=dict)
     barge_in_count: int = 0
-    provider_errors: dict = field(default_factory=dict)  # provider -> count
+    provider_errors: dict = field(default_factory=dict)
     verifier_attempts: int = 0
     verifier_blocked: int = 0
     transcript: str = ""                 # stored REDACTED only
-    recording_ref: str = ""              # encrypted object reference, not audio
+    recording_ref: str = ""
     repeat_same_issue: bool = False
 
     @property
@@ -96,7 +97,8 @@ class CallRecord:
 
 
 class MetricsDashboard:
-    def __init__(self, window_hours: float = CONTAINMENT_WINDOW_HOURS, retention_days: int = 90):
+    def __init__(self, window_hours: float = CONTAINMENT_WINDOW_HOURS,
+                 retention_days: int = 90):
         if float(window_hours) != float(CONTAINMENT_WINDOW_HOURS):
             raise ValueError(
                 "containment window is FIXED by contracts v1.0.0 at "
@@ -105,9 +107,8 @@ class MetricsDashboard:
         self.retention_days = int(retention_days)
         self._lock = threading.RLock()
         self._calls: list[CallRecord] = []
-        self.benchmarks: dict = {}       # kept strictly separate, see snapshot()
+        self.benchmarks: dict = {}
 
-    # ------------------------------------------------------------------
     def record_call(self, record: CallRecord | dict, **kw) -> CallRecord:
         if isinstance(record, dict):
             data = {**record, **kw}
@@ -120,8 +121,6 @@ class MetricsDashboard:
             record.escalation_reason = record.escalation_reason.value
         record.transcript = redact_pii(record.transcript)
         with self._lock:
-            # Repeat detection: same phone+intent inside the 72h window
-            # revokes the earlier call's final containment.
             window_s = self.window_hours * 3600
             for prev in self._calls:
                 if prev.phone and prev.phone == record.phone \
@@ -135,10 +134,9 @@ class MetricsDashboard:
     add_call = record_call
 
     def set_benchmarks(self, benchmarks: dict) -> None:
-        """International/vendor benchmarks, stored apart from internal data."""
+        """International/vendor benchmarks, stored apart from internal."""
         self.benchmarks = dict(benchmarks or {})
 
-    # ------------------------------------------------------------------
     def _final_contained(self, c: CallRecord) -> bool:
         return c.provisional_contained and not c.repeat_same_issue
 
@@ -147,23 +145,28 @@ class MetricsDashboard:
         with self._lock:
             calls = list(self._calls)
         total = len(calls)
+
         def rate(n, d=total):
             return round(n / d, 4) if d else 0.0
 
         prov = sum(1 for c in calls if c.provisional_contained)
         final = sum(1 for c in calls if self._final_contained(c))
-        mature = sum(1 for c in calls if c.started_at and now - c.started_at >= self.window_hours * 3600)
+        mature = sum(1 for c in calls if c.started_at
+                     and now - c.started_at >= self.window_hours * 3600)
         escalated = [c for c in calls if c.escalated]
-        reasons = Counter(str(c.escalation_reason) for c in escalated if c.escalation_reason)
+        reasons = Counter(str(c.escalation_reason) for c in escalated
+                          if c.escalation_reason)
         dept_known = [c for c in escalated if c.correct_department is not None]
         dept_ok = sum(1 for c in dept_known if c.correct_department)
         total_cost = sum(c.cost for c in calls)
         total_minutes = sum(c.ai_minutes for c in calls)
         lat = {}
         for stage in ("asr", "llm", "tts", "total"):
-            vals = [float(c.latencies_ms[stage]) for c in calls if stage in c.latencies_ms]
+            vals = [float(c.latencies_ms[stage]) for c in calls
+                    if stage in c.latencies_ms]
             if vals:
-                lat[stage] = {"p50": percentile(vals, 50), "p95": percentile(vals, 95), "n": len(vals)}
+                lat[stage] = {"p50": percentile(vals, 50),
+                              "p95": percentile(vals, 95), "n": len(vals)}
         provider_errors = Counter()
         for c in calls:
             provider_errors.update(c.provider_errors or {})
@@ -171,7 +174,7 @@ class MetricsDashboard:
         v_blocked = sum(c.verifier_blocked for c in calls)
         csats = [c.csat for c in calls if c.csat is not None]
 
-        snapshot = {
+        return {
             "source": "internal_measured",
             "total_calls": total,
             "contracts_version": CONTRACTS_VERSION,
@@ -181,7 +184,7 @@ class MetricsDashboard:
             "contained_final": final,
             "containment_final_count": final,
             "containment_mature_calls": mature,
-            "kpi_containment": rate(final),   # KPI is ALWAYS the final layer
+            "kpi_containment": rate(final),
             "escalation_rate": rate(len(escalated)),
             "escalation_by_reason": dict(reasons),
             "escalation_reason_rates": {k: rate(v) for k, v in reasons.items()},
@@ -193,10 +196,12 @@ class MetricsDashboard:
             "csat_avg": round(sum(csats) / len(csats), 3) if csats else None,
             "latency_ms": lat,
             "latency_slo_p95_ms": TOTAL_SLO_P95_MS,
-            "latency_slo_breached": bool(lat.get("total") and lat["total"]["p95"] > TOTAL_SLO_P95_MS),
+            "latency_slo_breached": bool(
+                lat.get("total") and lat["total"]["p95"] > TOTAL_SLO_P95_MS),
             "barge_in_rate": rate(sum(1 for c in calls if c.barge_in_count > 0)),
             "provider_errors": dict(provider_errors),
-            "provider_error_calls_rate": rate(sum(1 for c in calls if c.provider_errors)),
+            "provider_error_calls_rate": rate(
+                sum(1 for c in calls if c.provider_errors)),
             "verifier_block_rate": round(v_blocked / v_attempts, 4) if v_attempts else 0.0,
             "verifier_blocked_count": v_blocked,
             "cost_per_ai_minute": round(total_cost / total_minutes, 6) if total_minutes else 0.0,
@@ -209,7 +214,6 @@ class MetricsDashboard:
             "benchmarks_mixed_into_kpi": False,
             "claimed_resolution_rate": None,  # never promise 80%
         }
-        return snapshot
 
     snapshot = compute
     dashboard = compute
@@ -225,8 +229,10 @@ class MetricsDashboard:
                 "total": n,
                 "containment_final_rate": round(
                     sum(1 for c in items if self._final_contained(c)) / n, 4) if n else 0.0,
-                "escalation_rate": round(sum(1 for c in items if c.escalated) / n, 4) if n else 0.0,
-                "abandonment_rate": round(sum(1 for c in items if c.abandoned) / n, 4) if n else 0.0,
+                "escalation_rate": round(
+                    sum(1 for c in items if c.escalated) / n, 4) if n else 0.0,
+                "abandonment_rate": round(
+                    sum(1 for c in items if c.abandoned) / n, 4) if n else 0.0,
             }
         return out
 
@@ -237,10 +243,10 @@ class MetricsDashboard:
                 hour = time.strftime("%H", time.localtime(c.started_at))
                 groups[hour].append(c)
         return {h: {"total": len(v),
-                    "abandonment_rate": round(sum(1 for c in v if c.abandoned) / len(v), 4)}
+                    "abandonment_rate": round(
+                        sum(1 for c in v if c.abandoned) / len(v), 4)}
                 for h, v in sorted(groups.items())}
 
-    # ------------------------------------------------------------------
     def purge_expired(self, now: Optional[float] = None) -> int:
         now = time.time() if now is None else float(now)
         cutoff = now - self.retention_days * 86400
@@ -251,15 +257,17 @@ class MetricsDashboard:
             return before - len(self._calls)
 
     def analytics_transcripts(self) -> list:
-        """What analytics may see: redacted transcripts only."""
         with self._lock:
             return [{"trace_id": c.trace_id, "transcript": c.transcript}
                     for c in self._calls]
 
     def render_text(self, now: Optional[float] = None) -> str:
         s = self.compute(now)
-        return (f"Calls: {s['total_calls']} | Containment (final, {self.window_hours:.0f}h): "
-                f"{s['containment_final_rate']:.1%} | Provisional: {s['containment_provisional_rate']:.1%} | "
-                f"Escalation: {s['escalation_rate']:.1%} {s['escalation_by_reason']} | "
-                f"Abandonment: {s['abandonment_rate']:.1%} | FCR: {s['fcr_rate']:.1%} | "
-                f"AHT: {s['aht_s']}s | Cost/contained: {s['cost_per_contained_call']}")
+        return (f"Calls: {s['total_calls']} | Containment (final, "
+                f"{self.window_hours:.0f}h): {s['containment_final_rate']:.1%} | "
+                f"Provisional: {s['containment_provisional_rate']:.1%} | "
+                f"Escalation: {s['escalation_rate']:.1%} "
+                f"{s['escalation_by_reason']} | Abandonment: "
+                f"{s['abandonment_rate']:.1%} | FCR: {s['fcr_rate']:.1%} | "
+                f"AHT: {s['aht_s']}s | Cost/contained: "
+                f"{s['cost_per_contained_call']}")

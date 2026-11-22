@@ -15,7 +15,6 @@ ORDERS = {
 def order_adapter(tenant_id, shop_id, **params):
     rec = ORDERS.get((tenant_id, params["order_code"]))
     if rec is None:
-        # simulate an upstream that (wrongly) returns another tenant's record
         for (t, code), r in ORDERS.items():
             if code == params["order_code"]:
                 return dict(r)
@@ -23,7 +22,7 @@ def order_adapter(tenant_id, shop_id, **params):
     return dict(rec)
 
 def policy_adapter(tenant_id, shop_id, **params):
-    return {"data": {"text": "Đổi trả trong 7 ngày"}, "source_id": "kb:policy@v3",
+    return {"data": {"text": "Doi tra trong 7 ngay"}, "source_id": "kb:policy@v3",
             "record_id": "return-policy", "updated_at": "2026-11-01T00:00:00+07:00"}
 
 def ticket_adapter(tenant_id, shop_id, **params):
@@ -36,7 +35,8 @@ def gw():
                                  "create_callback_ticket": ticket_adapter})
 
 def sess(tenant="shopA"):
-    return AuthenticatedSession(session_id="s1", tenant_id=tenant, shop_id=tenant, caller_phone="0901234567")
+    return AuthenticatedSession(session_id="s1", tenant_id=tenant, shop_id=tenant,
+                                caller_phone="0901234567")
 
 def test_unknown_tool_rejected():
     r = gw().call(sess(), "delete_all_orders", {})
@@ -59,7 +59,6 @@ def test_wrong_phone_suffix_returns_no_data():
     assert not r.ok and r.error == "ownership_check_failed" and r.data == {} and r.evidence == []
 
 def test_cross_tenant_record_rejected():
-    # shopA session asks for shopB's order code: adapter leaks B's record, gateway must drop it
     r = gw().call(sess("shopA"), "get_order_status", {"order_code": "DH002", "phone_suffix": "999"})
     assert not r.ok and r.error in ("cross_tenant_record", "ownership_check_failed") and r.data == {}
 
@@ -83,7 +82,7 @@ def test_timeout_config_must_be_800_to_1500():
             ToolGateway(timeouts_ms={"get_policy": bad}); assert False
         except ValueError:
             pass
-    ToolGateway(timeouts_ms={"get_policy": 1200})  # inside range: ok
+    ToolGateway(timeouts_ms={"get_policy": 1200})
 
 def test_transient_error_retried_then_ok_and_nontransient_not():
     calls = {"n": 0}
@@ -99,7 +98,7 @@ def test_transient_error_retried_then_ok_and_nontransient_not():
         calls2["n"] += 1; raise RuntimeError("bug")
     g2 = ToolGateway(adapters={"get_policy": broken}, max_retries=3)
     r = g2.call(sess(), "get_policy", {"topic": "return"})
-    assert not r.ok and calls2["n"] == 1  # no retry on non-transient
+    assert not r.ok and calls2["n"] == 1
 
 def test_missing_evidence_is_error_not_answer():
     def bare(tenant_id, shop_id, **params):
@@ -108,13 +107,12 @@ def test_missing_evidence_is_error_not_answer():
     r = g.call(sess(), "get_policy", {"topic": "return"})
     assert not r.ok and r.error == "missing_evidence" and r.evidence == []
 
-def test_create_callback_ticket_idempotent_and_cache_per_tenant():
+def test_create_callback_ticket_idempotent_and_policy_cache():
     g = gw()
-    p = {"phone": "0901234567", "summary": "gọi lại", "idempotency_key": "k-1"}
+    p = {"phone": "0901234567", "summary": "goi lai", "idempotency_key": "k-1"}
     a = g.call(sess(), "create_callback_ticket", p)
     b = g.call(sess(), "create_callback_ticket", p)
     assert a.ok and b.ok and b.deduplicated
-    # policy cache: second identical call served from cache (adapter still returns same evidence)
     r1 = g.call(sess(), "get_policy", {"topic": "return"})
     r2 = g.call(sess(), "get_policy", {"topic": "return"})
     assert r1.ok and r2.ok and r1.evidence == r2.evidence

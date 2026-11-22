@@ -1,27 +1,27 @@
 """
-Voice security policy (approach_18) - Tier 1 + Tier 2 controls.
+Voice security policy - Tier 1 + Tier 2 controls.
 
 Tier 1 (mandatory before touching real data):
   * tenant_id comes ONLY from the authenticated telephony session
     (DID / trunk binding), never from caller speech, prompt or transcript.
-  * Risk-based verification: basic order lookup = order code + phone suffix;
-    high-risk actions (change address / cancel / compensation) = OTP verified.
-  * Prompt-injection defence for voice: system / evidence / transcript are
-    separate channels; transcript is untrusted data, never instructions;
-    tool calls are allowlist-checked and blocked when injection is detected.
+  * Risk-based verification: basic lookup = order code + phone suffix;
+    high-risk actions (change address / cancel / compensation) = OTP.
+  * Prompt-injection defence: system / evidence / transcript are separate
+    channels; transcript is untrusted data, never instructions; tool
+    calls are allowlist-checked and blocked on detected injection.
   * PII masking in logs / transcripts, by role.
-  * Rate limiting / blocklist / max session duration (toll-fraud, spam).
+  * Rate limiting / blocklist / max session duration (toll fraud, spam).
 
 Tier 2:
-  * Tenant-scoped encryption at rest for recordings/transcripts (KMS-style
-    interface; stdlib HMAC-keystream implementation for local/test use,
-    replace key provider with cloud KMS + AES-GCM in production).
-    Transport is required to be TLS 1.3 at the telephony/API boundary -
-    enforced by deployment config, asserted by `REQUIRED_TLS`.
+  * Tenant-scoped encryption at rest for recordings/transcripts
+    (KMS-style interface; stdlib HMAC-keystream for local/test use -
+    production swaps the key provider for cloud KMS + AES-GCM).
+    Transport must be TLS 1.3 at the telephony/API boundary
+    (REQUIRED_TLS, enforced by deployment config).
   * Retention expiry, hash-chained immutable audit log, recording consent.
 
-Contracts: CONTRACTS_VERSION / TOTAL_SLO_P95_MS are imported from
-src.contracts (locked v1.0.0); this module defines NO mirror of them.
+CONTRACTS_VERSION / TOTAL_SLO_P95_MS are imported from src.contracts
+(locked v1.0.0); this module defines NO mirror of them.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ class SecurityDecision:
 
 @dataclass
 class AuthenticatedSession:
-    """Tenant binding established by telephony layer, NOT by the caller."""
+    """Tenant binding established by the telephony layer, NOT the caller."""
     session_id: str
     tenant_id: str
     caller_phone: str = ""
@@ -83,7 +83,7 @@ class AuthenticatedSession:
     source_ip: str = ""
     authenticated: bool = True
     started_at: float = field(default_factory=time.time)
-    recording_consent: Optional[bool] = None  # None=not asked, False=declined
+    recording_consent: Optional[bool] = None
 
 
 @dataclass
@@ -91,13 +91,11 @@ class Verification:
     order_code_provided: bool = False
     phone_suffix_match: bool = False
     otp_verified: bool = False
-    resource_tenant_id: str = ""       # tenant that owns the target resource
+    resource_tenant_id: str = ""
     resource_owner_phone: str = ""
 
 
-# --------------------------------------------------------------------------
-# Tier 1a: tenant isolation
-# --------------------------------------------------------------------------
+# ---------------------------------------------------------------- tenant
 def resolve_tenant(session: AuthenticatedSession,
                    claimed_tenant: Optional[str] = None) -> SecurityDecision:
     """Tenant is always the session tenant. A different claimed tenant
@@ -107,20 +105,20 @@ def resolve_tenant(session: AuthenticatedSession,
                                 "unauthenticated_session", "tenant_no_session")
     if claimed_tenant and claimed_tenant != session.tenant_id:
         return SecurityDecision(False, SecurityAction.DENY,
-                                "tenant_mismatch_claimed_vs_session", "tenant_mismatch")
+                                "tenant_mismatch_claimed_vs_session",
+                                "tenant_mismatch")
     return SecurityDecision(True, SecurityAction.ALLOW, "", "tenant_ok")
 
 
-def check_cross_tenant(session: AuthenticatedSession, resource_tenant_id: str) -> SecurityDecision:
+def check_cross_tenant(session: AuthenticatedSession,
+                       resource_tenant_id: str) -> SecurityDecision:
     if not resource_tenant_id or resource_tenant_id != session.tenant_id:
         return SecurityDecision(False, SecurityAction.DENY,
                                 "cross_tenant_access", "cross_tenant")
     return SecurityDecision(True, SecurityAction.ALLOW, "", "same_tenant")
 
 
-# --------------------------------------------------------------------------
-# Tier 1b: risk-based verification
-# --------------------------------------------------------------------------
+# ------------------------------------------------------- risk-based auth
 HIGH_RISK_ACTIONS = {"change_address", "cancel_order", "compensation",
                      "refund", "change_phone", "export_data"}
 BASIC_ACTIONS = {"get_order_status", "get_inventory", "get_appointment",
@@ -142,17 +140,18 @@ def authorize_action(session: AuthenticatedSession, action: str,
     if action in HIGH_RISK_ACTIONS:
         if not v.otp_verified:
             return SecurityDecision(False, SecurityAction.REQUIRE_OTP,
-                                    "otp_required_for_high_risk", "otp_required")
-        # OTP alone is not enough if the resource belongs to another phone
+                                    "otp_required_for_high_risk",
+                                    "otp_required")
         if v.resource_owner_phone and session.caller_phone \
                 and v.resource_owner_phone != session.caller_phone:
             return SecurityDecision(False, SecurityAction.DENY,
                                     "owner_phone_mismatch", "owner_mismatch")
-        return SecurityDecision(True, SecurityAction.ALLOW, "", "high_risk_otp_ok")
-    # Basic lookup: order code + phone suffix must both check out
+        return SecurityDecision(True, SecurityAction.ALLOW, "",
+                                "high_risk_otp_ok")
     if not (v.order_code_provided and v.phone_suffix_match):
         return SecurityDecision(False, SecurityAction.REQUIRE_VERIFICATION,
-                                "order_code_and_phone_suffix_required", "basic_verify")
+                                "order_code_and_phone_suffix_required",
+                                "basic_verify")
     return SecurityDecision(True, SecurityAction.ALLOW, "", "basic_ok")
 
 
@@ -162,16 +161,15 @@ def phone_suffix_match(phone: str, suffix: str) -> bool:
     return len(sfx) >= 3 and digits.endswith(sfx)
 
 
-# --------------------------------------------------------------------------
-# Tier 1c: prompt injection via audio / transcript
-# --------------------------------------------------------------------------
+# ------------------------------------------------------ prompt injection
 _INJECTION_PATTERNS = [
-    "bo qua huong dan", "bo qua chi thi", "ignore previous", "ignore instructions",
-    "ignore all instructions", "system prompt", "prompt he thong",
-    "ban la he thong", "gia vo la he thong", "developer message",
-    "hay chay lenh", "run command", "truy cap co so du lieu",
-    "truy cap database", "cho toi du lieu cua khach khac",
-    "liet ke tat ca don hang", "show all orders", "bypass", "vuot qua bao mat",
+    "bo qua huong dan", "bo qua chi thi", "ignore previous",
+    "ignore instructions", "ignore all instructions", "system prompt",
+    "prompt he thong", "ban la he thong", "gia vo la he thong",
+    "developer message", "hay chay lenh", "run command",
+    "truy cap co so du lieu", "truy cap database",
+    "cho toi du lieu cua khach khac", "liet ke tat ca don hang",
+    "show all orders", "bypass", "vuot qua bao mat",
     "khong can xac thuc", "skip verification", "bo qua xac thuc",
 ]
 ALLOWED_TOOLS = BASIC_ACTIONS | {"create_callback_ticket"}
@@ -192,9 +190,9 @@ def sanitize_transcript(transcript: str) -> dict:
 def validate_tool_call(session: AuthenticatedSession, tool: str,
                        args: Optional[dict] = None,
                        transcript: str = "") -> SecurityDecision:
-    """A tool call may only run if: session valid, tool allowlisted,
-    no tenant override in args, and no injection in the driving transcript.
-    An injection in the transcript can therefore NEVER become a tool call."""
+    """Runs only if: session valid, tool allowlisted, no tenant override
+    in args, no injection in the driving transcript. An injection in the
+    transcript can therefore NEVER become a tool call."""
     args = args or {}
     d = resolve_tenant(session, claimed_tenant=args.get("tenant_id"))
     if not d.allowed:
@@ -205,22 +203,20 @@ def validate_tool_call(session: AuthenticatedSession, tool: str,
     if detect_injection(transcript):
         return SecurityDecision(False, SecurityAction.DENY,
                                 "prompt_injection_detected", "injection_block")
-    # Args must never widen scope: no raw SQL / db handles / arbitrary URLs
     blob = _fold(" ".join(str(v) for v in args.values()))
-    if any(x in blob for x in ("select ", "drop table", "union select", "http://", "https://")):
+    if any(x in blob for x in ("select ", "drop table", "union select",
+                               "http://", "https://")):
         return SecurityDecision(False, SecurityAction.DENY,
                                 "suspicious_tool_args", "tool_args")
     return SecurityDecision(True, SecurityAction.ALLOW, "", "tool_ok")
 
 
-# --------------------------------------------------------------------------
-# Tier 1d: PII masking / redaction, by role
-# --------------------------------------------------------------------------
+# ------------------------------------------------------------ PII masking
 _PHONE_RE = re.compile(r"\b0\d{9}\b")
 _EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]+\b")
 _ID_RE = re.compile(r"\b\d{9}(\d{3})?\b")
 _CARD_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-_ADDR_RE = re.compile(r"(địa chỉ\s*:\s*)([^\n,;]+)", re.IGNORECASE)
+_ADDR_RE = re.compile(r"((?:địa chỉ|dia chi)\s*:\s*)([^\n,;]+)", re.IGNORECASE)
 
 
 def _mask_phone(m: re.Match) -> str:
@@ -229,14 +225,12 @@ def _mask_phone(m: re.Match) -> str:
 
 
 def redact_pii(text: str, role: str = "analytics") -> str:
-    """Log/analytics redaction. Raw phone / ID / card / address must not
-    survive into logs for ANY role; agents keep only phone last-2 hint."""
+    """Raw phone / ID / card / address must not survive into logs."""
     if not text:
         return text or ""
     out = _CARD_RE.sub("[CARD]", text)
     out = _EMAIL_RE.sub("[EMAIL]", out)
     out = _PHONE_RE.sub(_mask_phone, out)
-    # 9/12-digit IDs (CCCD) - run after phone so 10-digit phones already masked
     out = _ID_RE.sub("[ID]", out)
     out = _ADDR_RE.sub(lambda m: m.group(1) + "[ADDRESS]", out)
     return out
@@ -249,9 +243,7 @@ def contains_raw_pii(text: str) -> bool:
     return bool(_PHONE_RE.search(text or "") or _EMAIL_RE.search(text or ""))
 
 
-# --------------------------------------------------------------------------
-# Tier 1e: rate limiting, blocklist, session duration (toll fraud / spam)
-# --------------------------------------------------------------------------
+# ------------------------------------------- rate limit / session control
 class RateLimiter:
     def __init__(self, max_per_window: int = 5, window_s: float = 60.0,
                  max_session_s: float = 1800.0):
@@ -290,12 +282,9 @@ class RateLimiter:
         return SecurityDecision(True, SecurityAction.ALLOW, "", "duration_ok")
 
 
-# --------------------------------------------------------------------------
-# Tier 1f: session resource registry - hangup must release EVERYTHING
-# --------------------------------------------------------------------------
 class SessionRegistry:
-    """Tracks connections/tasks per session; close() is idempotent and
-    leaves zero leaked resources (asserted by tests)."""
+    """Tracks resources per session; close() is idempotent and leaves
+    zero leaked resources (asserted by tests)."""
 
     def __init__(self):
         self._resources: dict[str, dict[str, Any]] = {}
@@ -326,9 +315,7 @@ class SessionRegistry:
     leaked_count = active_count
 
 
-# --------------------------------------------------------------------------
-# Tier 2a: tenant-scoped encryption at rest (KMS-style interface)
-# --------------------------------------------------------------------------
+# ------------------------------------------- tenant encryption at rest
 def _keystream(key: bytes, nonce: bytes, n: int) -> bytes:
     out = b""
     counter = 0
@@ -368,9 +355,7 @@ class TenantCipher:
         return data.decode("utf-8")
 
 
-# --------------------------------------------------------------------------
-# Tier 2b: retention, audit log (hash chain), recording consent
-# --------------------------------------------------------------------------
+# --------------------------------- retention / audit chain / consent
 def retention_expired(created_at: float, retention_days: int,
                       now: Optional[float] = None) -> bool:
     now = time.time() if now is None else now
@@ -378,7 +363,7 @@ def retention_expired(created_at: float, retention_days: int,
 
 
 class AuditLog:
-    """Append-only, hash-chained: tampering with an entry breaks the chain."""
+    """Append-only, hash-chained: tampering breaks the chain."""
 
     def __init__(self):
         self.entries: list[dict] = []
@@ -386,7 +371,8 @@ class AuditLog:
     def append(self, event: str, actor: str, detail: str = "") -> dict:
         prev = self.entries[-1]["hash"] if self.entries else "GENESIS"
         body = f"{prev}|{time.time()}|{event}|{actor}|{redact_pii(detail)}"
-        entry = {"event": event, "actor": actor, "detail": redact_pii(detail),
+        entry = {"event": event, "actor": actor,
+                 "detail": redact_pii(detail),
                  "contracts_version": CONTRACTS_VERSION,
                  "prev_hash": prev,
                  "hash": hashlib.sha256(body.encode()).hexdigest()}
@@ -403,12 +389,10 @@ class AuditLog:
 
 
 def recording_allowed(session: AuthenticatedSession) -> bool:
-    """Recording requires consent not declined; declined => no recording,
-    call may continue unrecorded or route to callback per tenant policy."""
+    """Recording requires consent not declined."""
     return session.recording_consent is not False
 
 
-# Convenience facade -------------------------------------------------------
 class VoiceSecurityPolicy:
     def __init__(self, rate_limiter: Optional[RateLimiter] = None):
         self.rate_limiter = rate_limiter or RateLimiter()

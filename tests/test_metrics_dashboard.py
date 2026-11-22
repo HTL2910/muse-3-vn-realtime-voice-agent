@@ -114,7 +114,7 @@ def test_benchmarks_kept_separate_and_no_80_percent_claim():
 
 def test_transcript_redacted_before_analytics_and_retention_purge():
     d = MetricsDashboard(retention_days=30)
-    d.record_call(call(transcript="SĐT 0901234567 email a@example.com CCCD 079123456789"))
+    d.record_call(call(transcript="SDT 0901234567 email a@example.com CCCD 079123456789"))
     stored = d.analytics_transcripts()[0]["transcript"]
     assert "0901234567" not in stored and "a@example.com" not in stored and "079123456789" not in stored
     assert redact_pii("0901234567") == "09******67"

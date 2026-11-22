@@ -1,15 +1,14 @@
 """
-Policy engine (approach_08) - hard rules that ALWAYS win over confidence gate.
+Policy engine - hard rules that ALWAYS win over the confidence gate.
 
-Fail-closed decision table, configurable per tenant (thresholds/keywords may
-be extended per tenant, hard rules may NOT be disabled per tenant).
-Every decision is audit-logged with an EscalationReason from contracts.
+Fail-closed decision table, configurable per tenant (thresholds/keywords
+may be extended per tenant; hard rules may NOT be disabled per tenant and
+the clarification cap may NOT be raised). Every decision is audit-logged
+with an EscalationReason from contracts.
 
-Contracts: EscalationReason / MAX_CLARIFICATIONS / CONTRACTS_VERSION are
-imported from src.contracts (locked v1.0.0) - the single source of truth.
-MAX_CLARIFICATIONS = 1 in v1.0.0. This module defines NO mirror of any
-contracts constant or enum; if contracts is absent the import fails
-closed instead of silently using divergent local values.
+EscalationReason / MAX_CLARIFICATIONS / CONTRACTS_VERSION are imported
+from src.contracts (locked v1.0.0, MAX_CLARIFICATIONS = 1). This module
+defines NO mirror of any contracts constant or enum.
 """
 from __future__ import annotations
 
@@ -25,13 +24,13 @@ from src.contracts import (  # type: ignore
 
 class PolicyAction(str, Enum):
     ALLOW = "allow"
-    ESCALATE_NOW = "escalate_now"                # chuyen ngay
-    ESCALATE_PRIORITY = "escalate_priority"      # chuyen uu tien
-    CALLBACK_TICKET = "callback_ticket"          # ghi nhan + hen goi lai
+    ESCALATE_NOW = "escalate_now"
+    ESCALATE_PRIORITY = "escalate_priority"
+    CALLBACK_TICKET = "callback_ticket"
 
 
 def _fold(text: str) -> str:
-    """Lowercase + strip Vietnamese diacritics for robust keyword matching."""
+    """Lowercase + strip Vietnamese diacritics for robust matching."""
     text = (text or "").lower()
     text = unicodedata.normalize("NFD", text)
     text = "".join(c for c in text if unicodedata.category(c) != "Mn")
@@ -43,10 +42,10 @@ class PolicyContext:
     text: str = ""
     tenant_id: str = ""
     intent: Optional[str] = None
-    confidence: float = 0.0            # confidence-gate / LLM confidence, if any
+    confidence: float = 0.0
     clarification_count: int = 0
     failure_count: int = 0
-    sentiment_score: float = 0.0       # -1.0 (very negative) .. 1.0
+    sentiment_score: float = 0.0       # -1.0 .. 1.0
     customer_requested_human: bool = False
     allowed_intents: Optional[set] = None
 
@@ -67,9 +66,8 @@ class PolicyDecision:
         return self.action == PolicyAction.ALLOW
 
 
-# Keyword tables (matched on folded text, so unaccented input also hits)
+# rule_id, action, priority, keywords (folded at init), forbidden outputs
 _RULES: list[tuple[str, PolicyAction, str, list[str], list[str]]] = [
-    # rule_id, action, priority, keywords, forbidden
     ("self_harm_violence", PolicyAction.ESCALATE_PRIORITY, "critical",
      ["tu tu", "tu hai", "muon chet", "ket lieu", "giet nguoi", "danh nhau",
       "bom", "khung bo", "tu sat"],
@@ -79,20 +77,22 @@ _RULES: list[tuple[str, PolicyAction, str, list[str], list[str]]] = [
       "thua kien", "khoi kien", "vi pham phap luat"],
      ["legal_commitment"]),
     ("compensation", PolicyAction.ESCALATE_NOW, "high",
-     ["boi thuong", "den bu", "bat den", "doi boi thuong", "yeu cau boi thuong"],
+     ["boi thuong", "den bu", "bat den", "doi boi thuong",
+      "yeu cau boi thuong"],
      ["compensation_negotiation", "legal_commitment"]),
     ("angry_complaint", PolicyAction.ESCALATE_PRIORITY, "high",
      ["lua dao", "tay chay", "phot", "qua te", "vo trach nhiem",
       "lam an nhu", "khieu nai", "bao cao len bao", "dang facebook"],
      []),
     ("sensitive_health_finance", PolicyAction.ESCALATE_NOW, "high",
-     ["mat khau", "ma otp", "so the tin dung", "so cccd", "can cuoc cong dan",
-      "benh an", "chan doan benh", "toa thuoc", "tu van y khoa"],
+     ["mat khau", "ma otp", "so the tin dung", "so cccd",
+      "can cuoc cong dan", "benh an", "chan doan benh", "toa thuoc",
+      "tu van y khoa"],
      ["sensitive_advice"]),
     ("customer_request_human", PolicyAction.ESCALATE_NOW, "normal",
-     ["gap nhan vien", "gap nguoi that", "cho gap nguoi", "noi chuyen voi nguoi",
-      "may moc", "khong muon noi voi may", "chuyen may cho nhan vien",
-      "gap tong dai vien"],
+     ["gap nhan vien", "gap nguoi that", "cho gap nguoi",
+      "noi chuyen voi nguoi", "may moc", "khong muon noi voi may",
+      "chuyen may cho nhan vien", "gap tong dai vien"],
      []),
 ]
 
@@ -109,52 +109,49 @@ _REASON_BY_RULE = {
     "strong_negative_sentiment": EscalationReason.SENSITIVE,
 }
 
-# Phrases that mean an LLM draft is illegally negotiating / committing
-_COMPENSATION_DRAFT = ["se boi thuong", "cam ket boi thuong", "boi thuong cho anh",
-                       "boi thuong cho chi", "boi thuong cho ban", "se den bu",
+_COMPENSATION_DRAFT = ["se boi thuong", "cam ket boi thuong",
+                       "boi thuong cho anh", "boi thuong cho chi",
+                       "boi thuong cho ban", "se den bu",
                        "hoan tien 100%", "hoan lai 100%"]
-_LEGAL_DRAFT = ["cam ket phap ly", "chac chan thang kien", "dam bao ve mat phap ly",
+_LEGAL_DRAFT = ["cam ket phap ly", "chac chan thang kien",
+                "dam bao ve mat phap ly",
                 "chung toi chiu trach nhiem phap ly"]
 
 
 class PolicyEngine:
     """Rule + lightweight classifier running in parallel with the LLM.
-
-    Hard rules are evaluated BEFORE any confidence consideration:
-    a matching rule escalates regardless of confidence (even 1.0).
-    """
+    Hard rules are evaluated BEFORE any confidence consideration: a
+    matching rule escalates regardless of confidence (even 1.0)."""
 
     def __init__(self, tenant_config: Optional[dict] = None,
                  max_clarifications: int = MAX_CLARIFICATIONS,
                  sentiment_threshold: float = -0.8):
         self.tenant_config = tenant_config or {}
-        # Tenant may lower (stricter) but never raise the clarification cap
-        # above the contract constant, and may not disable hard rules.
-        requested = int(self.tenant_config.get("max_clarifications", max_clarifications))
+        requested = int(self.tenant_config.get(
+            "max_clarifications", max_clarifications))
+        # Tenant may be stricter, never above the contract cap.
         self.max_clarifications = min(requested, int(max_clarifications))
-        self.sentiment_threshold = float(
-            self.tenant_config.get("sentiment_threshold", sentiment_threshold))
+        self.sentiment_threshold = float(self.tenant_config.get(
+            "sentiment_threshold", sentiment_threshold))
         self.audit_log: list[dict] = []
         extra = self.tenant_config.get("extra_keywords", {})
         self._rules = []
         for rule_id, action, priority, kws, forbidden in _RULES:
-            merged = [_fold(k) for k in kws] + [_fold(k) for k in extra.get(rule_id, [])]
-            self._rules.append((rule_id, action, priority, merged, list(forbidden)))
+            merged = [_fold(k) for k in kws] + \
+                     [_fold(k) for k in extra.get(rule_id, [])]
+            self._rules.append(
+                (rule_id, action, priority, merged, list(forbidden)))
 
-    # ------------------------------------------------------------------
     def evaluate(self, ctx: PolicyContext | str, **kw) -> PolicyDecision:
         if isinstance(ctx, str):
             ctx = PolicyContext(text=ctx, **kw)
         elif kw:
             for k, v in kw.items():
                 setattr(ctx, k, v)
-        folded = _fold(ctx.text)
-
-        decision = self._decide(ctx, folded)
+        decision = self._decide(ctx, _fold(ctx.text))
         audit = {
             "ts": time.time(), "tenant_id": ctx.tenant_id,
-            "rule_id": decision.rule_id,
-            "action": decision.action.value,
+            "rule_id": decision.rule_id, "action": decision.action.value,
             "reason": decision.reason.value if decision.reason else None,
             "priority": decision.priority,
             "confidence_seen": ctx.confidence,
@@ -165,7 +162,6 @@ class PolicyEngine:
         self.audit_log.append(audit)
         return decision
 
-    # Backwards/alternate names other modules commonly use
     check = evaluate
     decide = evaluate
 
@@ -177,19 +173,18 @@ class PolicyEngine:
                     action=action, escalate=True,
                     reason=_REASON_BY_RULE[rule_id], rule_id=rule_id,
                     priority=priority,
-                    allow_llm_negotiation=("compensation_negotiation" not in forbidden
-                                           and "legal_commitment" not in forbidden),
+                    allow_llm_negotiation=(
+                        "compensation_negotiation" not in forbidden
+                        and "legal_commitment" not in forbidden),
                     forbidden=forbidden)
-
-        # 2) Explicit human request flag from dialogue layer
+        # 2) Explicit human-request flag from the dialogue layer
         if ctx.customer_requested_human:
             return PolicyDecision(
                 action=PolicyAction.ESCALATE_NOW, escalate=True,
                 reason=EscalationReason.CUSTOMER_REQUEST,
                 rule_id="customer_request_human", priority="normal",
                 allow_llm_negotiation=False)
-
-        # 3) Clarification / failure loops (contract cap = 1 in v1.0.0)
+        # 3) Clarification / failure loops (contract cap = 1)
         if ctx.clarification_count > self.max_clarifications:
             return PolicyDecision(
                 action=PolicyAction.ESCALATE_NOW, escalate=True,
@@ -202,8 +197,7 @@ class PolicyEngine:
                 reason=EscalationReason.REPEATED_FAILURE,
                 rule_id="repeated_failure", priority="normal",
                 allow_llm_negotiation=False)
-
-        # 4) Out of scope intent
+        # 4) Out-of-scope intent
         if ctx.intent and ctx.allowed_intents is not None \
                 and ctx.intent not in ctx.allowed_intents:
             return PolicyDecision(
@@ -211,24 +205,18 @@ class PolicyEngine:
                 reason=EscalationReason.OUT_OF_SCOPE,
                 rule_id="out_of_scope", priority="normal",
                 allow_llm_negotiation=False)
-
-        # 5) Strong negative sentiment classifier signal
+        # 5) Strong negative sentiment
         if ctx.sentiment_score <= self.sentiment_threshold:
             return PolicyDecision(
                 action=PolicyAction.ESCALATE_PRIORITY, escalate=True,
                 reason=EscalationReason.SENSITIVE,
                 rule_id="strong_negative_sentiment", priority="high",
                 allow_llm_negotiation=False)
-
         return PolicyDecision(action=PolicyAction.ALLOW, escalate=False)
 
-    # ------------------------------------------------------------------
     def guard_response(self, draft: str) -> PolicyDecision:
-        """Block an LLM draft that negotiates compensation / commits legally.
-
-        Returns ALLOW if clean; otherwise an escalate decision - the draft
-        must NOT be spoken to the customer.
-        """
+        """Block an LLM draft that negotiates compensation or makes a
+        legal commitment. The blocked draft must NOT be spoken."""
         folded = _fold(draft)
         if any(p in folded for p in _COMPENSATION_DRAFT):
             d = PolicyDecision(
@@ -242,7 +230,8 @@ class PolicyEngine:
                 action=PolicyAction.ESCALATE_NOW, escalate=True,
                 reason=EscalationReason.SENSITIVE,
                 rule_id="legal_commitment_blocked", priority="high",
-                allow_llm_negotiation=False, forbidden=["legal_commitment"])
+                allow_llm_negotiation=False,
+                forbidden=["legal_commitment"])
         else:
             return PolicyDecision(action=PolicyAction.ALLOW, escalate=False,
                                   rule_id="draft_ok")
@@ -254,7 +243,7 @@ class PolicyEngine:
         return d
 
     def apply_gate(self, ctx: PolicyContext, gate_allows: bool) -> PolicyDecision:
-        """Combine with confidence gate: hard rule wins even if gate allows."""
+        """Hard rule wins even when the confidence gate allows."""
         decision = self.evaluate(ctx)
         if decision.escalate:
             return decision

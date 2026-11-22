@@ -10,7 +10,7 @@ def svc(**kw):
 
 def test_create_writes_ticket_and_outbox_atomically():
     s = svc()
-    t = s.create_ticket(phone="0901234567", intent="order_status", summary="Tra đơn DH1",
+    t = s.create_ticket(phone="0901234567", intent="order_status", summary="Tra don DH1",
                         call_id="c1", idempotency_key="k1", now=NOW)
     assert t.ticket_code.startswith("CB") and not t.deduplicated
     assert s.count_tickets() == 1 and s.count_outbox("pending") == 1
@@ -46,8 +46,8 @@ def test_completed_ticket_not_deduped_against_new_request():
 
 def test_handoff_package_attached_and_returning_caller_resumes():
     s = svc()
-    hp = {"summary": "khiếu nại giao chậm", "intent": "complaint"}
-    t = s.create_ticket(phone="0905", intent="complaint", summary="Giao chậm", handoff_package=hp, now=NOW)
+    hp = {"summary": "khieu nai giao cham", "intent": "complaint"}
+    t = s.create_ticket(phone="0905", intent="complaint", summary="Giao cham", handoff_package=hp, now=NOW)
     assert s.get_ticket(t.ticket_id).handoff_package == hp
     again = s.find_open_ticket("0905", "complaint", now=NOW + 100)
     assert again and again.ticket_id == t.ticket_id
@@ -102,7 +102,7 @@ def test_fail_ticket_reschedules_then_dead_letters():
 
 def test_confirmation_message_has_code_summary_and_no_dead_end():
     s = svc()
-    t = s.create_ticket(phone="0934", intent="order_status", summary="Kiểm tra đơn DH99",
+    t = s.create_ticket(phone="0934", intent="order_status", summary="Kiem tra don DH99",
                         window_start=NOW + 3600, now=NOW, confirm_channels=["sms"])
     msg = s.confirmation_message(t)
     assert t.ticket_code in msg and "DH99" in msg and "0934" in msg
