@@ -1,3 +1,4 @@
+ — phần 1/2
 import sys, os, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.callback.callback_ticket_service import (
@@ -60,6 +61,10 @@ def test_sla_by_priority_and_overdue_alert():
     overdue = s.overdue_tickets(now=NOW + 2 * 3600)
     assert [t.ticket_code for t in overdue] == [hi.ticket_code]
     assert s.sla_alerts(now=NOW + 2 * 3600)[0]["priority"] == "critical"
+
+
+
+[[FILE tests/test_callback_ticket_service.py]] — phần 2/2 (nối tiếp, kết thúc file)
 
 def test_scheduler_respects_window_and_capacity_and_no_duplicate_claim():
     s = svc()

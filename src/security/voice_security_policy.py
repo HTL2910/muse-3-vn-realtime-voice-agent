@@ -1,3 +1,4 @@
+ — phần 1/3
 """
 Voice security policy - Tier 1 + Tier 2 controls.
 
@@ -116,7 +117,7 @@ def check_cross_tenant(session: AuthenticatedSession,
         return SecurityDecision(False, SecurityAction.DENY,
                                 "cross_tenant_access", "cross_tenant")
     return SecurityDecision(True, SecurityAction.ALLOW, "", "same_tenant")
-
+[[FILE src/security/voice_security_policy.py]] — phần 2/3 (nối tiếp)
 
 # ------------------------------------------------------- risk-based auth
 HIGH_RISK_ACTIONS = {"change_address", "cancel_order", "compensation",
@@ -242,6 +243,9 @@ redact_for_log = redact_pii
 def contains_raw_pii(text: str) -> bool:
     return bool(_PHONE_RE.search(text or "") or _EMAIL_RE.search(text or ""))
 
+
+
+[[FILE src/security/voice_security_policy.py]] — phần 3/3 (nối tiếp, kết thúc file)
 
 # ------------------------------------------- rate limit / session control
 class RateLimiter:

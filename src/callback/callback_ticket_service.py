@@ -1,3 +1,4 @@
+ — phần 1/3
 """
 Callback / ticket service - durable, never lose a request.
 
@@ -118,6 +119,10 @@ class CallbackTicketService:
               status TEXT DEFAULT 'pending', attempts INTEGER DEFAULT 0,
               next_retry_at REAL, created_at REAL);
             """)
+
+
+
+[[FILE src/callback/callback_ticket_service.py]] — phần 2/3 (nối tiếp)
 
     # ------------------------------------------------------------- reads
     def _row_to_ticket(self, row) -> CallbackTicket:
@@ -276,6 +281,10 @@ class CallbackTicketService:
             if row and TicketStatus(row["status"]) in OPEN_STATUSES:
                 return self._row_to_ticket(row)
             return None
+
+
+
+[[FILE src/callback/callback_ticket_service.py]] — phần 3/3 (nối tiếp, kết thúc file)
 
     # ------------------------------------------------------ outbox worker
     def drain_outbox(self, sender: Callable[[dict], Any],
