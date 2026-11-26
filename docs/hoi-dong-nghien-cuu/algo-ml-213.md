@@ -1,6 +1,6 @@
 # Ước lượng % đạt được cho hiệu năng AI từ bằng chứng test và mô phỏng
 
-_algo-ml · Chuyên gia Thuật toán & AI · lần nộp 1_
+_algo-ml · Chuyên gia Thuật toán & AI · lần nộp 2_
 
 ## Việc được giao
 
@@ -8,12 +8,12 @@ Góp ý cần xử lý: chủ doanh nghiệp yêu cầu đánh giá khả năng 
 
 ## Bài làm
 
-# Lần nộp — script chạy kèm 1/2: `scripts/evaluation/feasibility_run.py`
+# Lần nộp 2 — Báo cáo đầy đủ: `docs/evaluation/03-algo-ml-feasibility.md`
 
-Script đã được kiểm chứng chạy đúng ở đúng vị trí nộp (`<repo>/scripts/evaluation/`, `REPO = parents[2]` = gốc repo) và cho kết quả **đồng nhất** với lần chạy gốc (golden, gate fuzz, Erlang-A, cỡ mẫu đều identical). File `feasibility_run2.py` nộp ở đợt sau.
+Báo cáo hoàn chỉnh trong một file duy nhất (đã lưu cả lên VM tại `~/workspace/feasibility/repo/docs/evaluation/03-algo-ml-feasibility.md`). 2 script chạy kèm nộp sau. Đã chạy và kiểm chứng trên VM: pytest **100 passed trong 0,35s** với contracts v1.0.0 thật; mọi số trong báo cáo đều có log ở Phụ lục A.
 
-(đã nộp file `scripts/evaluation/feasibility_run.py`)
+(đã nộp file `docs/evaluation/03-algo-ml-feasibility.md`)
 
 ## File đã nộp
 
-- `scripts/evaluation/feasibility_run.py`
+- `docs/evaluation/03-algo-ml-feasibility.md`
